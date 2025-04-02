@@ -15,11 +15,11 @@ Setting up multiple self-hosted Supabase instances is challenging due to contain
 ## Quick Start
 
 ```bash
-# Create a new Supabase instance named "paydownr" using port 8080 as the base port
-./create_new_supabase.sh paydownr 8080
+# Create a new Supabase instance named "projectA" using port 8080 as the base port
+./create_new_supabase.sh projectA 8080
 
-# Create another instance named "robomovie" using port 8282 as the base port
-./create_new_supabase.sh robomovie 8282
+# Create another instance named "projectB" using port 8282 as the base port
+./create_new_supabase.sh projectB 8282
 ```
 
 ## Port Allocation
