@@ -23,22 +23,39 @@ Setting up multiple self-hosted Supabase instances is challenging due to contain
 ```
 
 ## Port Allocation
+
 When you provide a base port (e.g., 8080), the script automatically calculates other necessary ports:
-ServiceFormulaExample (base: 8080)Example (base: 8282)Kong HTTP APIbase_port80808282Kong HTTPS APIbase_port + 44385238725PostgreSQLbase_port + 5432 - 800055125714Connection Poolerbase_port + 6543 - 800066236825Studio Dashboardbase_port + 3000 - 800030803282Analyticsbase_port - 408040004202
-Features
+
+| Service | Formula | Example (base: 8080) | Example (base: 8282) |
+|---------|---------|----------------------|----------------------|
+| Kong HTTP API | base_port | 8080 | 8282 |
+| Kong HTTPS API | base_port + 443 | 8523 | 8725 |
+| PostgreSQL | base_port + 5432 - 8000 | 5512 | 5714 |
+| Connection Pooler | base_port + 6543 - 8000 | 6623 | 6825 |
+| Studio Dashboard | base_port + 3000 - 8000 | 3080 | 3282 |
+| Analytics | base_port - 4080 | 4000 | 4202 |
+
+
+##Features
+
 Container Naming
+
 All containers are named using the pattern supabase-{service}-{project_name}, such as:
 
+```
 supabase-db-projectA
-supabase-studio-projectB
 
+supabase-studio-projectB
+```
 The only exception is the realtime service, which uses: realtime-dev.{project_name}-realtime
 
 ## Network Isolation
 Each Supabase project gets its own Docker network named {project_name}-network, ensuring complete isolation between projects.
-Volume Management
+
+### Volume Management
 Database volumes are renamed to {project_name}_db-config to prevent conflicts between projects.
-Configuration Customization
+
+### Configuration Customization
 
 Each project has customized ports in the .env file
 Default organization and project names match your project name
