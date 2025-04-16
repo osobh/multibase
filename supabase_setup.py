@@ -946,7 +946,7 @@ echo "PostgreSQL is ready!"
 for i in $(seq 1 10); do
   echo "Attempting to connect to _supabase database (attempt $i/10)..."
   
-  if psql -h "${DB_HOSTNAME}" -p "${DB_PORT}" -U "${DB_USERNAME}" -d _supabase -c '\q' > /dev/null 2>&1; then
+  if psql -h "${DB_HOSTNAME}" -p "${DB_PORT}" -U "${DB_USERNAME}" -d _supabase -c '\\q' > /dev/null 2>&1; then
     echo "_supabase database exists and is accessible!"
     break
   fi
