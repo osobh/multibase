@@ -1,0 +1,102 @@
+_format_version: "2.1"
+_transform: true
+
+services:
+  - name: auth-v1
+    url: http://auth:9999/verify
+    routes:
+      - name: auth-v1-route
+        paths:
+          - /auth/v1/verify
+    plugins:
+      - name: cors
+  - name: auth-v1-admin
+    url: http://auth:9999/admin
+    routes:
+      - name: auth-v1-admin-route
+        paths:
+          - /auth/v1/admin
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: true
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+  - name: rest
+    url: http://rest:3000
+    routes:
+      - name: rest-route
+        paths:
+          - /rest/v1
+    plugins:
+      - name: cors
+  - name: postgrest
+    url: http://rest:3000
+    routes:
+      - name: postgrest-route
+        paths:
+          - /
+        strip_path: false
+    plugins:
+      - name: cors
+  - name: realtime
+    url: http://realtime:4000/socket/
+    routes:
+      - name: realtime-route
+        paths:
+          - /realtime/v1
+        strip_path: true
+    plugins:
+      - name: cors
+  - name: storage
+    url: http://storage:5000
+    routes:
+      - name: storage-route
+        paths:
+          - /storage/v1
+    plugins:
+      - name: cors
+  - name: meta
+    url: http://meta:8080
+    routes:
+      - name: meta-route
+        paths:
+          - /pg
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: true
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+  - name: functions
+    url: http://functions:9000
+    routes:
+      - name: functions-route
+        paths:
+          - /functions/v1
+    plugins:
+      - name: cors
+
+consumers:
+  - username: anonymous
+    keyauth_credentials:
+      - key: {{ SUPABASE_ANON_KEY }}
+  - username: service_role
+    keyauth_credentials:
+      - key: {{ SUPABASE_SERVICE_KEY }}
+    acls:
+      - group: admin
+  - username: dashboard
+    basicauth_credentials:
+      - username: {{ DASHBOARD_USERNAME }}
+        password: {{ DASHBOARD_PASSWORD }}
+    acls:
+      - group: admin

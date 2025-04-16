@@ -1,0 +1,46 @@
+# Default Vector configuration for Supabase
+api:
+  enabled: true
+  address: 0.0.0.0:9001
+
+# Data sources
+sources:
+  docker_syslog:
+    type: docker_logs
+    docker_host: unix:///var/run/docker.sock  # Hardcoded path
+
+# Data transformations
+transforms:
+  parse_logs:
+    type: remap
+    inputs:
+      - docker_syslog
+    source: |
+      # Simply store the message and metadata
+      .parsed = .message
+      .container_name = .container_name
+      .timestamp = .timestamp
+
+# Data destinations
+sinks:
+  console:
+    type: console
+    inputs:
+      - parse_logs
+    encoding:
+      codec: json
+
+  analytics:
+    type: http
+    inputs:
+      - parse_logs
+    encoding:
+      codec: json
+    uri: http://analytics:4000/api/logs
+    method: post
+    auth:
+      strategy: bearer
+      token: "${LOGFLARE_API_KEY}"
+    request:
+      headers:
+        Content-Type: application/json
