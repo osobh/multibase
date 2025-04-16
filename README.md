@@ -1,114 +1,220 @@
-# Multibase: Multi-Instance Supabase Self-Hosting Tool
+# Supabase Setup Tools
 
-Multibase is a tool that makes it easy to create and manage multiple Supabase instances on a single host. Each instance runs with its own isolated network, unique container names, and dedicated ports.
-
-## Overview
-
-Setting up multiple self-hosted Supabase instances is challenging due to container name conflicts, port conflicts, and resource sharing issues. Multibase solves these problems by:
-
-1. Creating uniquely named containers for each project
-2. Assigning custom port ranges that don't conflict
-3. Setting up isolated Docker networks
-4. Creating proper volume management for database persistence
-5. Customizing environment variables for each instance
-
-## Quick Start
-
-```bash
-# Create a new Supabase instance named "projectA" using port 8080 as the base port
-./create_new_supabase.sh projectA 8080
-
-# Create another instance named "projectB" using port 8282 as the base port
-./create_new_supabase.sh projectB 8282
-```
-
-## Port Allocation
-
-When you provide a base port (e.g., 8080), the script automatically calculates other necessary ports:
-
-| Service | Formula | Example (base: 8080) | Example (base: 8282) |
-|---------|---------|----------------------|----------------------|
-| Kong HTTP API | base_port | 8080 | 8282 |
-| Kong HTTPS API | base_port + 443 | 8523 | 8725 |
-| PostgreSQL | base_port + 5432 - 8000 | 5512 | 5714 |
-| Connection Pooler | base_port + 6543 - 8000 | 6623 | 6825 |
-| Studio Dashboard | base_port + 3000 - 8000 | 3080 | 3282 |
-| Analytics | base_port - 4080 | 4000 | 4202 |
-
+This repository contains Python tools for easily creating and managing self-hosted Supabase deployments using Docker.
 
 ## Features
 
-Container Naming
+- **Automatic port allocation**: Finds available ports for different services
+- **Complete configuration**: Sets up all Supabase services with proper configuration
+- **Project isolation**: Each project has its own Docker network and volumes
+- **Easy management**: Simple commands to create, start, stop, and reset projects
 
-All containers are named using the pattern supabase-{service}-{project_name}, such as:
+## Requirements
 
-```
-supabase-db-projectA
+- Python 3.6+
+- Docker and Docker Compose
+- `psutil` Python package (for port detection)
 
-supabase-studio-projectB
-```
-The only exception is the realtime service, which uses: realtime-dev.{project_name}-realtime
+## Installation
 
-## Network Isolation
-Each Supabase project gets its own Docker network named {project_name}-network, ensuring complete isolation between projects.
+1. Download both Python files to your computer:
+   - `supabase_setup.py`: Core module for creating Supabase projects
+   - `supabase_manager.py`: Command-line tool for managing projects
 
-### Volume Management
-Database volumes are renamed to {project_name}_db-config to prevent conflicts between projects.
+2. Install required dependencies:
+   ```bash
+   pip install psutil
+   ```
 
-### Configuration Customization
+3. Make the manager script executable:
+   ```bash
+   chmod +x supabase_manager.py
+   ```
 
-Each project has customized ports in the .env file
-Default organization and project names match your project name
-Dashboard password is set to your project name for easy access
+## Usage
+
+### Creating a New Project
 
 ```bash
-
-./create_new_supabase.sh <project-name> [base-port]
-
+./supabase_manager.py create myproject
 ```
 
-The source .env step is critical as it ensures all the environment variables are loaded into your current shell, which Docker Compose needs to properly substitute values in the configuration.
-Accessing Services
+This creates a new Supabase project with automatically assigned ports. You can also specify a base port:
 
-After starting, you can access:
-
-Studio dashboard: http://localhost:<studio-port>
-API endpoint: http://localhost:<http-port>
-PostgreSQL: Connect on port <postgres-port>
-Analytics dashboard: Available on port <analytics-port>
-
-## Resetting an Instance
-Each project includes a reset script that removes all data and lets you start fresh:
 ```bash
-cd <project-name>
-./reset.sh
+./supabase_manager.py create myproject --base-port 5000
 ```
-## Customization
-The script creates several files in your project directory:
 
-docker-compose.yml: Main configuration with ports and container settings
-docker-compose.override.yml: Network isolation settings
-.env: Environment variables with all custom ports
-reset.sh: Helper script to reset the environment
-README.md: Project-specific instructions
+### Starting a Project
 
-You can customize any of these files to meet your specific requirements.
-Requirements
+```bash
+./supabase_manager.py start myproject
+```
 
-Docker and Docker Compose installed
-Basic knowledge of Supabase and Docker
-Sufficient system resources to run multiple Supabase instances
+To see detailed output during startup:
+
+```bash
+./supabase_manager.py start myproject --verbose
+```
+
+### Checking Project Status
+
+```bash
+./supabase_manager.py status myproject
+```
+
+### Stopping a Project
+
+```bash
+./supabase_manager.py stop myproject
+```
+
+By default, this removes volumes. To keep volumes:
+
+```bash
+./supabase_manager.py stop myproject --keep-volumes
+```
+
+### Resetting a Project
+
+This stops the project and resets the database data:
+
+```bash
+./supabase_manager.py reset myproject
+```
+
+### Listing All Projects
+
+```bash
+./supabase_manager.py list
+```
+
+## Project Structure
+
+Each created project has the following structure:
+
+```
+myproject/
+├── docker-compose.yml
+├── .env
+├── README.md
+├── reset.sh
+└── volumes/
+    ├── analytics/
+    │   └── entrypoint.sh
+    ├── api/
+    │   └── kong.yml
+    ├── db/
+    │   ├── _supabase.sql
+    │   ├── data/
+    │   ├── init/
+    │   │   └── setup.sql
+    │   └── logs.sql
+    ├── functions/
+    │   ├── hello/
+    │   │   └── index.ts
+    │   └── main/
+    │       └── index.ts
+    ├── logs/
+    │   └── vector.yml
+    ├── pooler/
+    │   └── pooler.exs
+    └── storage/
+        └── stub/
+```
+
+## Accessing Supabase Services
+
+Once your project is running, you can access:
+
+- **Studio Dashboard**: `http://localhost:<studio_port>`
+- **API Endpoint**: `http://localhost:<kong_http_port>`
+- **PostgreSQL Database**: Connect to `localhost:<postgres_port>` with username `postgres` and password from your `.env` file
+
+Default login credentials for the Studio:
+- Username: `supabase`
+- Password: Your project name
+
+## Environment Variables
+
+The `.env` file contains all configuration for your Supabase instance. Key variables:
+
+- `POSTGRES_PASSWORD`: PostgreSQL database password
+- `JWT_SECRET`: Secret key for JWT tokens
+- `ANON_KEY`/`SERVICE_ROLE_KEY`: API access keys
+- `STUDIO_PORT`, `KONG_HTTP_PORT`, etc.: Port configurations
+
+## Customizing Your Setup
+
+### Adding Migrations
+
+Add SQL files to `volumes/db/init/` to run them during database initialization.
+
+### Edge Functions
+
+Create new functions by adding directories under `volumes/functions/`:
+
+```bash
+mkdir -p myproject/volumes/functions/my-function
+```
+
+Then add an `index.ts` file with your function code.
+
+### Storage Rules
+
+Edit storage rules through the Studio interface after starting your project.
 
 ## Troubleshooting
 
 ### Port Conflicts
-If you see errors like port is already allocated, choose a different base port that doesn't conflict with other services on your system.
-Container Name Conflicts
 
-If container name conflicts occur, ensure you don't have existing containers with the same names. You can run docker ps -a to check existing containers.
+If you see an error like "port is already allocated", use the manager to recreate the project with different ports:
 
-### Memory/CPU Issues
-Running multiple Supabase instances can be resource-intensive. Make sure your host has sufficient RAM and CPU capacity.
+```bash
+./supabase_manager.py create myproject --base-port 6000
+```
 
-### License
-This project is available under the MIT License. See the LICENSE file for details.
+### Database Connection Issues
+
+If services can't connect to the database, try resetting the project:
+
+```bash
+./supabase_manager.py reset myproject
+```
+
+### Container Health Checks
+
+Check the status of your containers:
+
+```bash
+./supabase_manager.py status myproject
+```
+
+Or view detailed logs:
+
+```bash
+cd myproject
+docker compose logs -f
+```
+
+## Advanced Usage
+
+### Docker Compose Overrides
+
+You can create a `docker-compose.override.yml` file in your project directory to customize the Docker Compose configuration.
+
+### Custom SQL Initialization
+
+Add custom SQL initialization scripts to `volumes/db/init/` to run them during database initialization.
+
+### External Database
+
+To use an external PostgreSQL database instead of the included container, modify the connection settings in the `.env` file.
+
+## Contributing
+
+Feel free to submit issues or pull requests to improve these tools.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
