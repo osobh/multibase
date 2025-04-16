@@ -3,7 +3,6 @@
 Supabase Project Setup Tool
 
 This script creates a new Supabase self-hosted deployment with custom port mappings.
-It creates a directory structure with all necessary configuration files.
 """
 
 import os
@@ -32,6 +31,41 @@ class SupabaseProjectGenerator:
         # Templates and content
         self.templates = {}
         self._initialize_templates()
+
+    def run(self):
+        """Create project subdirectories and write template files."""
+        # Define subdirectories to create
+        subdirs = [
+            "volumes/api",
+            "volumes/db/data",
+            "volumes/functions",
+            "volumes/logs",
+            "volumes/pooler",
+            "volumes/storage",
+            "volumes/analytics",
+            "volumes/db"
+        ]
+
+        # Create subdirectories
+        for subdir in subdirs:
+            (self.project_dir / subdir).mkdir(parents=True, exist_ok=True)
+
+        # Write template files
+        (self.project_dir / "docker-compose.yml").write_text(self.templates["docker_compose"])
+        (self.project_dir / ".env").write_text(self.templates["env"])
+        (self.project_dir / "volumes/api/kong.yml").write_text(self.templates["kong"])
+        (self.project_dir / "volumes/logs/vector.yml").write_text(self.templates["vector"])
+        (self.project_dir / "volumes/pooler/pooler.exs").write_text(self.templates["pooler"])
+        (self.project_dir / "volumes/db/_supabase.sql").write_text(self.templates["supabase_sql"])
+        (self.project_dir / "volumes/db/logs.sql").write_text(self.templates["logs_sql"])
+        (self.project_dir / "volumes/db/jwt.sql").write_text(self.templates["jwt_sql"])
+        (self.project_dir / "volumes/db/pooler.sql").write_text(self.templates["pooler_sql"])
+        (self.project_dir / "volumes/db/realtime.sql").write_text(self.templates["realtime_sql"])
+        (self.project_dir / "volumes/db/roles.sql").write_text(self.templates["roles_sql"])
+        (self.project_dir / "volumes/db/webhooks.sql").write_text(self.templates["webhooks_sql"])
+        (self.project_dir / "volumes/functions/main").write_text(self.templates["function_main"])
+        (self.project_dir / "reset.sh").write_text(self.templates["reset_script"])
+        (self.project_dir / "README.md").write_text(self.templates["readme"])
 
     def _create_project_directory(self):
         """Create the project directory if it doesn't exist."""
@@ -87,13 +121,11 @@ class SupabaseProjectGenerator:
         self._init_pooler_template()
         self._init_db_templates()
         self._init_function_templates()
-        self._init_entrypoint_template()
         self._init_misc_templates()
 
     def _init_docker_compose_template(self):
         """Initialize docker-compose.yml template."""
-        self.templates["docker_compose"] = f"""version: '3'
-
+        self.templates["docker_compose"] = f"""
 name: {self.project_name}
 
 services:
@@ -173,7 +205,8 @@ services:
       GOTRUE_API_PORT: 9999
       API_EXTERNAL_URL: ${{API_EXTERNAL_URL}}
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${{POSTGRES_PASSWORD}}@${{POSTGRES_HOST}}:${{POSTGRES_PORT}}/${{POSTGRES_DB}}
+      # Use the internal port for PostgreSQL (5432) for container-to-container communication
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${{POSTGRES_PASSWORD}}@${{POSTGRES_HOST}}:5432/${{POSTGRES_DB}}
       GOTRUE_SITE_URL: ${{SITE_URL}}
       GOTRUE_URI_ALLOW_LIST: ${{ADDITIONAL_REDIRECT_URLS}}
       GOTRUE_DISABLE_SIGNUP: ${{DISABLE_SIGNUP}}
@@ -208,7 +241,8 @@ services:
       analytics:
         condition: service_healthy
     environment:
-      PGRST_DB_URI: postgres://authenticator:${{POSTGRES_PASSWORD}}@${{POSTGRES_HOST}}:${{POSTGRES_PORT}}/${{POSTGRES_DB}}
+      # Use the internal port for PostgreSQL (5432) for container-to-container communication
+      PGRST_DB_URI: postgres://authenticator:${{POSTGRES_PASSWORD}}@${{POSTGRES_HOST}}:5432/${{POSTGRES_DB}}
       PGRST_DB_SCHEMAS: ${{PGRST_DB_SCHEMAS}}
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${{JWT_SECRET}}
@@ -248,7 +282,8 @@ services:
     environment:
       PORT: 4000
       DB_HOST: ${{POSTGRES_HOST}}
-      DB_PORT: ${{POSTGRES_PORT}}
+      # Use the internal port for PostgreSQL (5432) for container-to-container communication
+      DB_PORT: 5432
       DB_USER: supabase_admin
       DB_PASSWORD: ${{POSTGRES_PASSWORD}}
       DB_NAME: ${{POSTGRES_DB}}
@@ -294,7 +329,8 @@ services:
       SERVICE_KEY: ${{SERVICE_ROLE_KEY}}
       POSTGREST_URL: http://rest:3000
       PGRST_JWT_SECRET: ${{JWT_SECRET}}
-      DATABASE_URL: postgres://supabase_storage_admin:${{POSTGRES_PASSWORD}}@${{POSTGRES_HOST}}:${{POSTGRES_PORT}}/${{POSTGRES_DB}}
+      # Use the internal port for PostgreSQL (5432) for container-to-container communication
+      DATABASE_URL: postgres://supabase_storage_admin:${{POSTGRES_PASSWORD}}@${{POSTGRES_HOST}}:5432/${{POSTGRES_DB}}
       FILE_SIZE_LIMIT: 52428800
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
@@ -338,7 +374,8 @@ services:
     environment:
       PG_META_PORT: 8080
       PG_META_DB_HOST: ${{POSTGRES_HOST}}
-      PG_META_DB_PORT: ${{POSTGRES_PORT}}
+      # Use the internal port for PostgreSQL (5432) for container-to-container communication
+      PG_META_DB_PORT: 5432
       PG_META_DB_NAME: ${{POSTGRES_DB}}
       PG_META_DB_USER: supabase_admin
       PG_META_DB_PASSWORD: ${{POSTGRES_PASSWORD}}
@@ -357,7 +394,8 @@ services:
       SUPABASE_URL: http://kong:8000
       SUPABASE_ANON_KEY: ${{ANON_KEY}}
       SUPABASE_SERVICE_ROLE_KEY: ${{SERVICE_ROLE_KEY}}
-      SUPABASE_DB_URL: postgresql://postgres:${{POSTGRES_PASSWORD}}@${{POSTGRES_HOST}}:${{POSTGRES_PORT}}/${{POSTGRES_DB}}
+      # Use the internal port for PostgreSQL (5432) for container-to-container communication
+      SUPABASE_DB_URL: postgresql://postgres:${{POSTGRES_PASSWORD}}@${{POSTGRES_HOST}}:5432/${{POSTGRES_DB}}
       VERIFY_JWT: "${{FUNCTIONS_VERIFY_JWT}}"
     command:
       [
@@ -372,8 +410,6 @@ services:
     restart: unless-stopped
     ports:
       - "{self.ports['analytics']}:4000"
-    volumes:
-      - ./volumes/analytics/entrypoint.sh:/entrypoint.sh:ro,z
     healthcheck:
       test:
         [
@@ -392,17 +428,18 @@ services:
       DB_USERNAME: supabase_admin
       DB_DATABASE: _supabase
       DB_HOSTNAME: ${{POSTGRES_HOST}}
-      DB_PORT: ${{POSTGRES_PORT}}
+      # Use the internal port for PostgreSQL (5432) for container-to-container communication
+      DB_PORT: 5432
       DB_PASSWORD: ${{POSTGRES_PASSWORD}}
       DB_SCHEMA: _analytics
       LOGFLARE_API_KEY: ${{LOGFLARE_API_KEY}}
       LOGFLARE_SINGLE_TENANT: true
       LOGFLARE_SUPABASE_MODE: true
       LOGFLARE_MIN_CLUSTER_SIZE: 1
-      POSTGRES_BACKEND_URL: postgresql://supabase_admin:${{POSTGRES_PASSWORD}}@${{POSTGRES_HOST}}:${{POSTGRES_PORT}}/_supabase
+      # Use the internal port for PostgreSQL (5432) for container-to-container communication
+      POSTGRES_BACKEND_URL: postgresql://supabase_admin:${{POSTGRES_PASSWORD}}@${{POSTGRES_HOST}}:5432/_supabase
       POSTGRES_BACKEND_SCHEMA: _analytics
       LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
-    command: ["/entrypoint.sh"]
 
   db:
     container_name: {self.project_name}-db
@@ -425,6 +462,8 @@ services:
         "pg_isready",
         "-U",
         "postgres",
+        "-d",
+        "_supabase",
         "-h",
         "localhost"
         ]
@@ -517,6 +556,7 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${{POSTGRES_DB}}
       POSTGRES_PASSWORD: ${{POSTGRES_PASSWORD}}
+      # Use the internal port for PostgreSQL (5432) for container-to-container communication
       DATABASE_URL: ecto://supabase_admin:${{POSTGRES_PASSWORD}}@db:5432/_supabase
       CLUSTER_POSTGRES: true
       SECRET_KEY_BASE: ${{SECRET_KEY_BASE}}
@@ -568,8 +608,10 @@ VAULT_ENC_KEY={vault_enc_key}
 ############
 # Database - You can change these to any PostgreSQL database that has logical replication enabled.
 ############
+# This is where other containers connect to the DB container internally
 POSTGRES_HOST=db
 POSTGRES_DB=postgres
+# This port is used for external connections from your host
 POSTGRES_PORT={self.ports['postgres']}
 # default user is postgres
 ############
@@ -824,67 +866,252 @@ user = %User{
 
     def _init_db_templates(self):
         """Initialize database SQL templates."""
-        self.templates["supabase_sql"] = """-- Create the _supabase database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS _supabase;
-\\c _supabase;
+        self.templates["supabase_sql"] = """\\set pguser `echo "$POSTGRES_USER"`
 
--- Create the _analytics schema
-CREATE SCHEMA IF NOT EXISTS _analytics;
+CREATE DATABASE _supabase WITH OWNER :pguser;"""
 
--- Set up permissions
-GRANT ALL PRIVILEGES ON DATABASE _supabase TO supabase_admin;
-GRANT ALL PRIVILEGES ON SCHEMA _analytics TO supabase_admin;"""
+        self.templates["logs_sql"] = """\\set pguser `echo "$POSTGRES_USER"`
 
-        self.templates["setup_sql"] = """-- Create the _supabase database
-CREATE DATABASE _supabase;
+\\c _supabase
+create schema if not exists _analytics;
+alter schema _analytics owner to :pguser;
+\\c postgres"""
 
--- Connect to the _supabase database
-\\c _supabase;
+        self.templates["jwt_sql"] = """\\set jwt_secret `echo "$JWT_SECRET"`
+\\set jwt_exp `echo "$JWT_EXP"`
 
--- Create the _analytics schema
-CREATE SCHEMA _analytics;
+ALTER DATABASE postgres SET "app.settings.jwt_secret" TO :'jwt_secret';
+ALTER DATABASE postgres SET "app.settings.jwt_exp" TO :'jwt_exp';"""
 
--- Grant privileges to supabase_admin
-GRANT ALL PRIVILEGES ON DATABASE _supabase TO supabase_admin;
-GRANT ALL PRIVILEGES ON SCHEMA _analytics TO supabase_admin;"""
+        self.templates["pooler_sql"] = """\\set pguser `echo "$POSTGRES_USER"`
 
-        self.templates["logs_sql"] = """-- Connect to the _supabase database
-\\c _supabase;
+\\c _supabase
+create schema if not exists _supavisor;
+alter schema _supavisor owner to :pguser;
+\\c postgres"""
 
--- Switch to the _analytics schema
-SET search_path TO _analytics;
+        self.templates["realtime_sql"] = """\\set pguser `echo "$POSTGRES_USER"`
 
--- Create tables required for Logflare/analytics if they don't exist
-CREATE TABLE IF NOT EXISTS schema_migrations (
-    version bigint NOT NULL,
-    inserted_at timestamp(0) without time zone
-);
+create schema if not exists _realtime;
+alter schema _realtime owner to :pguser;"""
 
-CREATE TABLE IF NOT EXISTS sources (
-    id SERIAL PRIMARY KEY,
-    name text NOT NULL,
-    token text NOT NULL UNIQUE,
-    public boolean DEFAULT false,
-    metrics jsonb,
-    user_id integer,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL
-);
+        self.templates["roles_sql"] = """-- NOTE: change to your own passwords for production environments
+\\set pgpass `echo "$POSTGRES_PASSWORD"`
 
-CREATE TABLE IF NOT EXISTS source_schemas (
-    id SERIAL PRIMARY KEY,
-    source_id integer REFERENCES sources (id) ON DELETE CASCADE,
-    schema jsonb,
-    bigquery_schema jsonb,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL
-);
+ALTER USER authenticator WITH PASSWORD :'pgpass';
+ALTER USER pgbouncer WITH PASSWORD :'pgpass';
+ALTER USER supabase_auth_admin WITH PASSWORD :'pgpass';
+ALTER USER supabase_functions_admin WITH PASSWORD :'pgpass';
+ALTER USER supabase_storage_admin WITH PASSWORD :'pgpass';"""
 
--- Add more tables as needed for the analytics system
+        self.templates["webhooks_sql"] = """BEGIN;
+  -- Create pg_net extension
+  CREATE EXTENSION IF NOT EXISTS pg_net SCHEMA extensions;
+  -- Create supabase_functions schema
+  CREATE SCHEMA supabase_functions AUTHORIZATION supabase_admin;
+  GRANT USAGE ON SCHEMA supabase_functions TO postgres, anon, authenticated, service_role;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA supabase_functions GRANT ALL ON TABLES TO postgres, anon, authenticated, service_role;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA supabase_functions GRANT ALL ON FUNCTIONS TO postgres, anon, authenticated, service_role;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA supabase_functions GRANT ALL ON SEQUENCES TO postgres, anon, authenticated, service_role;
+  -- supabase_functions.migrations definition
+  CREATE TABLE supabase_functions.migrations (
+    version text PRIMARY KEY,
+    inserted_at timestamptz NOT NULL DEFAULT NOW()
+  );
+  -- Initial supabase_functions migration
+  INSERT INTO supabase_functions.migrations (version) VALUES ('initial');
+  -- supabase_functions.hooks definition
+  CREATE TABLE supabase_functions.hooks (
+    id bigserial PRIMARY KEY,
+    hook_table_id integer NOT NULL,
+    hook_name text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT NOW(),
+    request_id bigint
+  );
+  CREATE INDEX supabase_functions_hooks_request_id_idx ON supabase_functions.hooks USING btree (request_id);
+  CREATE INDEX supabase_functions_hooks_h_table_id_h_name_idx ON supabase_functions.hooks USING btree (hook_table_id, hook_name);
+  COMMENT ON TABLE supabase_functions.hooks IS 'Supabase Functions Hooks: Audit trail for triggered hooks.';
+  CREATE FUNCTION supabase_functions.http_request()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    AS $function$
+    DECLARE
+      request_id bigint;
+      payload jsonb;
+      url text := TG_ARGV[0]::text;
+      method text := TG_ARGV[1]::text;
+      headers jsonb DEFAULT '{}'::jsonb;
+      params jsonb DEFAULT '{}'::jsonb;
+      timeout_ms integer DEFAULT 1000;
+    BEGIN
+      IF url IS NULL OR url = 'null' THEN
+        RAISE EXCEPTION 'url argument is missing';
+      END IF;
 
--- Ensure proper permissions
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA _analytics TO supabase_admin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA _analytics TO supabase_admin;"""
+      IF method IS NULL OR method = 'null' THEN
+        RAISE EXCEPTION 'method argument is missing';
+      END IF;
+
+      IF TG_ARGV[2] IS NULL OR TG_ARGV[2] = 'null' THEN
+        headers = '{"Content-Type": "application/json"}'::jsonb;
+      ELSE
+        headers = TG_ARGV[2]::jsonb;
+      END IF;
+
+      IF TG_ARGV[3] IS NULL OR TG_ARGV[3] = 'null' THEN
+        params = '{}'::jsonb;
+      ELSE
+        params = TG_ARGV[3]::jsonb;
+      END IF;
+
+      IF TG_ARGV[4] IS NULL OR TG_ARGV[4] = 'null' THEN
+        timeout_ms = 1000;
+      ELSE
+        timeout_ms = TG_ARGV[4]::integer;
+      END IF;
+
+      CASE
+        WHEN method = 'GET' THEN
+          SELECT http_get INTO request_id FROM net.http_get(
+            url,
+            params,
+            headers,
+            timeout_ms
+          );
+        WHEN method = 'POST' THEN
+          payload = jsonb_build_object(
+            'old_record', OLD,
+            'record', NEW,
+            'type', TG_OP,
+            'table', TG_TABLE_NAME,
+            'schema', TG_TABLE_SCHEMA
+          );
+
+          SELECT http_post INTO request_id FROM net.http_post(
+            url,
+            payload,
+            params,
+            headers,
+            timeout_ms
+          );
+        ELSE
+          RAISE EXCEPTION 'method argument % is invalid', method;
+      END CASE;
+
+      INSERT INTO supabase_functions.hooks
+        (hook_table_id, hook_name, request_id)
+      VALUES
+        (TG_RELID, TG_NAME, request_id);
+
+      RETURN NEW;
+    END
+  $function$;
+  -- Supabase super admin
+  DO
+  $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_roles
+      WHERE rolname = 'supabase_functions_admin'
+    )
+    THEN
+      CREATE USER supabase_functions_admin NOINHERIT CREATEROLE LOGIN NOREPLICATION;
+    END IF;
+  END
+  $$;
+  GRANT ALL PRIVILEGES ON SCHEMA supabase_functions TO supabase_functions_admin;
+  GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA supabase_functions TO supabase_functions_admin;
+  GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA supabase_functions TO supabase_functions_admin;
+  ALTER USER supabase_functions_admin SET search_path = "supabase_functions";
+  ALTER table "supabase_functions".migrations OWNER TO supabase_functions_admin;
+  ALTER table "supabase_functions".hooks OWNER TO supabase_functions_admin;
+  ALTER function "supabase_functions".http_request() OWNER TO supabase_functions_admin;
+  GRANT supabase_functions_admin TO postgres;
+  -- Remove unused supabase_pg_net_admin role
+  DO
+  $$
+  BEGIN
+    IF EXISTS (
+      SELECT 1
+      FROM pg_roles
+      WHERE rolname = 'supabase_pg_net_admin'
+    )
+    THEN
+      REASSIGN OWNED BY supabase_pg_net_admin TO supabase_admin;
+      DROP OWNED BY supabase_pg_net_admin;
+      DROP ROLE supabase_pg_net_admin;
+    END IF;
+  END
+  $$;
+  -- pg_net grants when extension is already enabled
+  DO
+  $$
+  BEGIN
+    IF EXISTS (
+      SELECT 1
+      FROM pg_extension
+      WHERE extname = 'pg_net'
+    )
+    THEN
+      GRANT USAGE ON SCHEMA net TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+      ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
+      ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
+      ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
+      ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
+      REVOKE ALL ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
+      REVOKE ALL ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
+      GRANT EXECUTE ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+      GRANT EXECUTE ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+    END IF;
+  END
+  $$;
+  -- Event trigger for pg_net
+  CREATE OR REPLACE FUNCTION extensions.grant_pg_net_access()
+  RETURNS event_trigger
+  LANGUAGE plpgsql
+  AS $$
+  BEGIN
+    IF EXISTS (
+      SELECT 1
+      FROM pg_event_trigger_ddl_commands() AS ev
+      JOIN pg_extension AS ext
+      ON ev.objid = ext.oid
+      WHERE ext.extname = 'pg_net'
+    )
+    THEN
+      GRANT USAGE ON SCHEMA net TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+      ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
+      ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
+      ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
+      ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
+      REVOKE ALL ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
+      REVOKE ALL ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
+      GRANT EXECUTE ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+      GRANT EXECUTE ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
+    END IF;
+  END;
+  $$;
+  COMMENT ON FUNCTION extensions.grant_pg_net_access IS 'Grants access to pg_net';
+  DO
+  $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_event_trigger
+      WHERE evtname = 'issue_pg_net_access'
+    ) THEN
+      CREATE EVENT TRIGGER issue_pg_net_access ON ddl_command_end WHEN TAG IN ('CREATE EXTENSION')
+      EXECUTE PROCEDURE extensions.grant_pg_net_access();
+    END IF;
+  END
+  $$;
+  INSERT INTO supabase_functions.migrations (version) VALUES ('20210809183423_update_grants');
+  ALTER function supabase_functions.http_request() SECURITY DEFINER;
+  ALTER function supabase_functions.http_request() SET search_path = supabase_functions;
+  REVOKE ALL ON FUNCTION supabase_functions.http_request() FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION supabase_functions.http_request() TO postgres, anon, authenticated, service_role;
+COMMIT;"""
 
     def _init_function_templates(self):
         """Initialize Edge Function templates."""
@@ -930,52 +1157,6 @@ serve(async (req) => {{
   );
 }});"""
 
-    def _init_entrypoint_template(self):
-        """Initialize analytics entrypoint script."""
-        self.templates["entrypoint"] = """#!/bin/sh
-
-# Wait for Postgres to be ready
-echo "Waiting for PostgreSQL to be ready..."
-until pg_isready -h "${DB_HOSTNAME}" -p "${DB_PORT}" -U "${DB_USERNAME}" > /dev/null 2>&1; do
-  echo "Postgres is unavailable - sleeping 2s"
-  sleep 2
-done
-echo "PostgreSQL is ready!"
-
-# Try to connect to _supabase database
-for i in $(seq 1 10); do
-  echo "Attempting to connect to _supabase database (attempt $i/10)..."
-  
-  if psql -h "${DB_HOSTNAME}" -p "${DB_PORT}" -U "${DB_USERNAME}" -d _supabase -c '\\q' > /dev/null 2>&1; then
-    echo "_supabase database exists and is accessible!"
-    break
-  fi
-  
-  if [ $i -eq 10 ]; then
-    echo "Failed to connect to _supabase database after 10 attempts."
-    echo "Creating _supabase database and analytics schema..."
-    
-    # Create the _supabase database and set up schema
-    psql -h "${DB_HOSTNAME}" -p "${DB_PORT}" -U "${DB_USERNAME}" -d postgres -c '
-      CREATE DATABASE _supabase;
-    '
-    
-    psql -h "${DB_HOSTNAME}" -p "${DB_PORT}" -U "${DB_USERNAME}" -d _supabase -c '
-      CREATE SCHEMA _analytics;
-      GRANT ALL PRIVILEGES ON DATABASE _supabase TO supabase_admin;
-      GRANT ALL PRIVILEGES ON SCHEMA _analytics TO supabase_admin;
-    '
-    
-    echo "Created _supabase database and analytics schema."
-  fi
-  
-  sleep 3
-done
-
-# Start the Logflare service
-echo "Starting Logflare..."
-exec "/app/bin/logflare" "start"""
-
     def _init_misc_templates(self):
         """Initialize miscellaneous templates."""
         self.templates["reset_script"] = """#!/bin/sh
@@ -1004,173 +1185,4 @@ This is a self-hosted Supabase deployment with custom port configurations.
 - Pooler (Connection Pooler): {self.ports['pooler']}
 - Studio Dashboard: {self.ports['studio']}
 - Analytics: {self.ports['analytics']}
-
-## Getting Started
-
-1. Start the services:
-   ```
-   docker compose up -d
-   ```
-
-2. Access the Studio dashboard at:
-   ```
-   http://localhost:{self.ports['studio']}
-   ```
-
-3. API endpoint is available at:
-   ```
-   http://localhost:{self.ports['kong_http']}
-   ```
-
-4. To connect to the database directly:
-   ```
-   psql -h localhost -p {self.ports['postgres']} -U postgres
-   ```
-
-## Reset Environment
-
-To reset the environment and start fresh:
-```
-./reset.sh
-```
-
-## Service Health
-
-You can check the health of your services with:
-```
-docker compose ps
-```
-
-## Logs
-
-To view logs for a specific service:
-```
-docker compose logs -f [service_name]
-```
-
-## Additional Information
-
-For more information about Supabase, visit:
-https://supabase.com/docs/reference/self-hosting-analytics/introduction"""
-
-    def create_project_structure(self):
-        """Create the project directory structure and files."""
-        # Create main directories
-        volumes_dir = self.project_dir / "volumes"
-        volumes_dir.mkdir()
-        
-        # Create subdirectories
-        dirs = [
-            "volumes/logs",
-            "volumes/api",
-            "volumes/storage/stub",
-            "volumes/pooler",
-            "volumes/db/init",
-            "volumes/db/data",
-            "volumes/functions/main",
-            "volumes/functions/hello",
-            "volumes/analytics"
-        ]
-        
-        for dir_path in dirs:
-            (self.project_dir / dir_path).mkdir(parents=True, exist_ok=True)
-        
-        # Write docker-compose.yml
-        with open(self.project_dir / "docker-compose.yml", "w") as f:
-            f.write(self.templates["docker_compose"])
-        
-        # Write .env file
-        with open(self.project_dir / ".env", "w") as f:
-            f.write(self.templates["env"])
-        
-        # Write vector.yml
-        with open(self.project_dir / "volumes/logs/vector.yml", "w") as f:
-            f.write(self.templates["vector"])
-        
-        # Write kong.yml
-        with open(self.project_dir / "volumes/api/kong.yml", "w") as f:
-            f.write(self.templates["kong"])
-        
-        # Write pooler.exs
-        with open(self.project_dir / "volumes/pooler/pooler.exs", "w") as f:
-            f.write(self.templates["pooler"])
-        
-        # Write database files
-        with open(self.project_dir / "volumes/db/_supabase.sql", "w") as f:
-            f.write(self.templates["supabase_sql"])
-        
-        with open(self.project_dir / "volumes/db/init/setup.sql", "w") as f:
-            f.write(self.templates["setup_sql"])
-        
-        with open(self.project_dir / "volumes/db/logs.sql", "w") as f:
-            f.write(self.templates["logs_sql"])
-        
-        # Write function files
-        with open(self.project_dir / "volumes/functions/main/index.ts", "w") as f:
-            f.write(self.templates["function_main"])
-        
-        with open(self.project_dir / "volumes/functions/hello/index.ts", "w") as f:
-            f.write(self.templates["function_hello"])
-        
-        # Write analytics entrypoint script
-        entrypoint_path = self.project_dir / "volumes/analytics/entrypoint.sh"
-        with open(entrypoint_path, "w") as f:
-            f.write(self.templates["entrypoint"])
-        # Make entrypoint script executable
-        entrypoint_path.chmod(0o755)
-        
-        # Write reset.sh
-        reset_path = self.project_dir / "reset.sh"
-        with open(reset_path, "w") as f:
-            f.write(self.templates["reset_script"])
-        # Make reset script executable
-        reset_path.chmod(0o755)
-        
-        # Write README.md
-        with open(self.project_dir / "README.md", "w") as f:
-            f.write(self.templates["readme"])
-
-    def run(self):
-        """Create the full project setup."""
-        self.create_project_structure()
-        print(f"\nSupabase project '{self.project_name}' has been successfully created.")
-        print("To start the services, run the following commands:")
-        print(f"  cd {self.project_name}")
-        print("  docker compose up -d")
-        print("")
-        print("You'll be able to access:")
-        print(f"  - Studio dashboard: http://localhost:{self.ports['studio']}")
-        print(f"  - API endpoint: http://localhost:{self.ports['kong_http']}")
-        print(f"  - PostgreSQL on port: {self.ports['postgres']}")
-        print(f"  - Analytics on port: {self.ports['analytics']}")
-        print("")
-        print("Login credentials:")
-        print("  Username: supabase")
-        print(f"  Password: {self.project_name}")
-        print("")
-        print("For more information, see README.md in the project directory.")
-
-
-def main():
-    """Main entry point for the Supabase project generator."""
-    parser = argparse.ArgumentParser(description="Create a new Supabase project with custom port mappings")
-    parser.add_argument("project_name", help="Name for the new Supabase project (used as directory name)")
-    parser.add_argument("--base-port", "-p", type=int, help="Starting port number for port mappings (default: random available port)")
-    
-    args = parser.parse_args()
-    
-    try:
-        generator = SupabaseProjectGenerator(args.project_name, args.base_port)
-        generator.run()
-    except FileExistsError as e:
-        print(f"Error: {e}")
-        return 1
-    except Exception as e:
-        print(f"Error: {e}")
-        return 1
-    
-    return 0
-
-
-if __name__ == "__main__":
-    exit(main())
+"""
