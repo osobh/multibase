@@ -48,7 +48,22 @@ class SupabaseProjectGenerator:
 
         # Create subdirectories
         for subdir in subdirs:
-            (self.project_dir / subdir).mkdir(parents=True, exist_ok=True)
+            dir_path = self.project_dir / subdir
+            if dir_path.exists() and not dir_path.is_dir():
+                dir_path.unlink()  # Remove file if it exists
+            dir_path.mkdir(parents=True, exist_ok=True)
+
+        # Ensure volumes/functions/main is a directory and add a sample function if missing
+        main_dir = self.project_dir / "volumes/functions/main"
+        if main_dir.exists() and not main_dir.is_dir():
+            main_dir.unlink()  # Remove file if it exists
+        main_dir.mkdir(parents=True, exist_ok=True)
+        sample_function = main_dir / "index.ts"
+        if not sample_function.exists():
+            sample_function.write_text("""// Sample Supabase Edge Function
+import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
+serve((_req) => new Response("Hello from Edge Functions!"));
+""")
 
         # Write template files
         (self.project_dir / "docker-compose.yml").write_text(self.templates["docker_compose"])
@@ -428,7 +443,8 @@ services:
       DB_USERNAME: supabase_admin
       DB_DATABASE: _supabase
       DB_HOSTNAME: ${{POSTGRES_HOST}}
-      # Use the internal port for PostgreSQL (5432) for container-to-container communication
+      # Use the internal port for Postgre
+      # SQL (5432) for container-to-container communication
       DB_PORT: 5432
       DB_PASSWORD: ${{POSTGRES_PASSWORD}}
       DB_SCHEMA: _analytics
@@ -738,8 +754,33 @@ sinks:
 
     def _init_kong_template(self):
         """Initialize Kong API Gateway configuration."""
-        self.templates["kong"] = """_format_version: "2.1"
+        anon_key = self._extract_env_value("ANON_KEY")
+        service_key = self._extract_env_value("SERVICE_ROLE_KEY")
+        dashboard_username = self._extract_env_value("DASHBOARD_USERNAME")
+        dashboard_password = self._extract_env_value("DASHBOARD_PASSWORD")
+
+        self.templates["kong"] = f"""_format_version: '2.1'
 _transform: true
+
+consumers:
+  - username: DASHBOARD
+  - username: anon
+    keyauth_credentials:
+      - key: {anon_key}
+  - username: service_role
+    keyauth_credentials:
+      - key: {service_key}
+
+acls:
+  - consumer: anon
+    group: anon
+  - consumer: service_role
+    group: admin
+
+basicauth_credentials:
+  - consumer: DASHBOARD
+    username: {dashboard_username}
+    password: {dashboard_password}
 
 services:
   - name: auth-v1
@@ -824,45 +865,49 @@ services:
           - /functions/v1
     plugins:
       - name: cors
+"""
 
-consumers:
-  - username: anonymous
-    keyauth_credentials:
-      - key: {{ SUPABASE_ANON_KEY }}
-  - username: service_role
-    keyauth_credentials:
-      - key: {{ SUPABASE_SERVICE_KEY }}
-    acls:
-      - group: admin
-  - username: dashboard
-    basicauth_credentials:
-      - username: {{ DASHBOARD_USERNAME }}
-        password: {{ DASHBOARD_PASSWORD }}
-    acls:
-      - group: admin"""
+    def _extract_env_value(self, key):
+        """Extract a value from the env template or return a placeholder."""
+        env = self.templates.get("env", "")
+        for line in env.splitlines():
+            if line.startswith(f"{key}="):
+                return line.split("=", 1)[1].strip()
+        return f"missing_{key}"
 
     def _init_pooler_template(self):
         """Initialize pooler configuration."""
-        self.templates["pooler"] = """alias Supavisor.Config
-alias Supavisor.Config.User
+        self.templates["pooler"] = """{:ok, _} = Application.ensure_all_started(:supavisor)
 
-Config.set_tenant_id("${POOLER_TENANT_ID}")
+{:ok, version} =
+  case Supavisor.Repo.query!("select version()") do
+    %{rows: [[ver]]} -> Supavisor.Helpers.parse_pg_version(ver)
+    _ -> nil
+  end
 
-user = %User{
-  username: "postgres",
-  password: "postgres",
-  pool_size: "${POOLER_DEFAULT_POOL_SIZE}",
-  pool_checkout_timeout: 1000,
-  check_query: "select 1",
-  max_client_conn: "${POOLER_MAX_CLIENT_CONN}",
-  ip_version: 4,
-  only_proxies: false,
-  admin: true
+params = %{
+  "external_id" => System.get_env("POOLER_TENANT_ID"),
+  "db_host" => "db",
+  "db_port" => System.get_env("POSTGRES_PORT"),
+  "db_database" => System.get_env("POSTGRES_DB"),
+  "require_user" => false,
+  "auth_query" => "SELECT * FROM pgbouncer.get_auth($1)",
+  "default_max_clients" => System.get_env("POOLER_MAX_CLIENT_CONN"),
+  "default_pool_size" => System.get_env("POOLER_DEFAULT_POOL_SIZE"),
+  "default_parameter_status" => %{"server_version" => version},
+  "users" => [%{
+    "db_user" => "pgbouncer",
+    "db_password" => System.get_env("POSTGRES_PASSWORD"),
+    "mode_type" => System.get_env("POOLER_POOL_MODE"),
+    "pool_size" => System.get_env("POOLER_DEFAULT_POOL_SIZE"),
+    "is_manager" => true
+  }]
 }
 
-%{cluster_name: "local", host: "db", port: "5432", database: "postgres", maintenance_db: "${POSTGRES_DB}"}
-|> Config.ensure_cluster!()
-|> Config.ensure_user!(user)"""
+if !Supavisor.Tenants.get_tenant_by_external_id(params["external_id"]) do
+  {:ok, _} = Supavisor.Tenants.create_tenant(params)
+end
+"""
 
     def _init_db_templates(self):
         """Initialize database SQL templates."""
