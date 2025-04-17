@@ -791,6 +791,14 @@ services:
           - /auth/v1/verify
     plugins:
       - name: cors
+  - name: auth-v1-api
+    url: http://auth:9999
+    routes:
+      - name: auth-v1-api-route
+        paths:
+          - /auth/v1
+    plugins:
+      - name: cors
   - name: auth-v1-admin
     url: http://auth:9999/admin
     routes:
