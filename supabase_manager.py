@@ -46,20 +46,27 @@ def find_used_ports():
     
     return used_ports
 
-def check_project_exists(project_name):
+def check_project_exists(project_path):
     """Check if a project directory exists."""
-    project_dir = Path(project_name)
+    project_dir = Path(project_path)
     return project_dir.exists() and project_dir.is_dir()
 
 def create_project(args):
     """Create a new Supabase project."""
-    if check_project_exists(args.project_name):
-        print(f"Error: Project directory '{args.project_name}' already exists.")
+    # Define projects directory
+    projects_dir = "projects"
+    project_path = os.path.join(projects_dir, args.project_name)
+    
+    # Create projects directory if it doesn't exist
+    os.makedirs(projects_dir, exist_ok=True)
+    
+    if check_project_exists(project_path):
+        print(f"Error: Project directory '{project_path}' already exists.")
         return 1
 
     # Create a project with the given name and base port
     try:
-        generator = SupabaseProjectGenerator(args.project_name, args.base_port)
+        generator = SupabaseProjectGenerator(project_path, args.base_port)
         generator.run()
         return 0
     except Exception as e:
@@ -68,12 +75,16 @@ def create_project(args):
 
 def start_project(args):
     """Start an existing Supabase project."""
-    if not check_project_exists(args.project_name):
-        print(f"Error: Project directory '{args.project_name}' does not exist.")
+    # Define projects directory
+    projects_dir = "projects"
+    project_path = os.path.join(projects_dir, args.project_name)
+    
+    if not check_project_exists(project_path):
+        print(f"Error: Project directory '{project_path}' does not exist.")
         return 1
 
     # Change to the project directory
-    os.chdir(args.project_name)
+    os.chdir(project_path)
 
     # Run docker compose up
     try:
@@ -117,12 +128,16 @@ def start_project(args):
 
 def stop_project(args):
     """Stop a running Supabase project."""
-    if not check_project_exists(args.project_name):
-        print(f"Error: Project directory '{args.project_name}' does not exist.")
+    # Define projects directory
+    projects_dir = "projects"
+    project_path = os.path.join(projects_dir, args.project_name)
+    
+    if not check_project_exists(project_path):
+        print(f"Error: Project directory '{project_path}' does not exist.")
         return 1
 
     # Change to the project directory
-    os.chdir(args.project_name)
+    os.chdir(project_path)
 
     # Run docker compose down
     try:
@@ -143,12 +158,16 @@ def stop_project(args):
 
 def reset_project(args):
     """Reset a Supabase project by removing database data."""
-    if not check_project_exists(args.project_name):
-        print(f"Error: Project directory '{args.project_name}' does not exist.")
+    # Define projects directory
+    projects_dir = "projects"
+    project_path = os.path.join(projects_dir, args.project_name)
+    
+    if not check_project_exists(project_path):
+        print(f"Error: Project directory '{project_path}' does not exist.")
         return 1
 
     # Change to the project directory
-    os.chdir(args.project_name)
+    os.chdir(project_path)
 
     # Run the reset script if it exists
     reset_script = Path("reset.sh")
@@ -183,12 +202,16 @@ def reset_project(args):
 
 def status_project(args):
     """Check the status of a Supabase project."""
-    if not check_project_exists(args.project_name):
-        print(f"Error: Project directory '{args.project_name}' does not exist.")
+    # Define projects directory
+    projects_dir = "projects"
+    project_path = os.path.join(projects_dir, args.project_name)
+    
+    if not check_project_exists(project_path):
+        print(f"Error: Project directory '{project_path}' does not exist.")
         return 1
 
     # Change to the project directory
-    os.chdir(args.project_name)
+    os.chdir(project_path)
 
     # Run docker compose ps
     try:
@@ -233,15 +256,22 @@ def status_project(args):
         return 1
 
 def list_projects(args):
-    """List all Supabase projects in the current directory."""
+    """List all Supabase projects in the projects directory."""
     projects = []
+    projects_dir = "projects"
+    
+    # Check if projects directory exists
+    if not os.path.exists(projects_dir):
+        print(f"Projects directory '{projects_dir}' not found.")
+        return 0
     
     # Find all directories with a docker-compose.yml file
-    for item in os.listdir('.'):
-        if os.path.isdir(item) and os.path.exists(os.path.join(item, 'docker-compose.yml')):
+    for item in os.listdir(projects_dir):
+        item_path = os.path.join(projects_dir, item)
+        if os.path.isdir(item_path) and os.path.exists(os.path.join(item_path, 'docker-compose.yml')):
             # Check if it's likely a Supabase project
-            if os.path.exists(os.path.join(item, 'volumes')) and os.path.exists(os.path.join(item, '.env')):
-                projects.append(item)
+            if os.path.exists(os.path.join(item_path, 'volumes')) and os.path.exists(os.path.join(item_path, '.env')):
+                projects.append(item_path)
     
     if not projects:
         print("No Supabase projects found in the current directory.")

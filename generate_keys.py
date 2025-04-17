@@ -1,133 +1,107 @@
 #!/usr/bin/env python3
 """
-Supabase Key Generator
+Supabase API Key Generator
 
-This script generates secure API keys and JWT secrets for Supabase deployments.
-It can also update existing .env files with new keys.
+This script generates secure JWT secrets and API keys for Supabase.
+It can update an existing .env file with the new keys.
 """
 
 import os
 import sys
 import argparse
-import random
+import secrets
 import string
-import base64
-import json
-import hmac
-import hashlib
-import time
-from pathlib import Path
+import jwt
+import datetime
 import re
-from datetime import datetime, timedelta
-import shutil
+from pathlib import Path
 
-def generate_random_string(length=32):
-    """Generate a secure random string of specified length."""
-    chars = string.ascii_letters + string.digits
-    return ''.join(random.choices(chars, k=length))
+def generate_jwt_secret(length=40):
+    """Generate a secure random string for JWT secret."""
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
-def generate_jwt_secret(length=48):
-    """Generate a secure JWT secret."""
-    return generate_random_string(length)
-
-def create_jwt_token(payload, secret, algorithm="HS256"):
-    """Create a JWT token with the given payload and secret."""
-    # Create header
-    header = {"alg": algorithm, "typ": "JWT"}
-    header_json = json.dumps(header, separators=(",", ":")).encode()
-    header_b64 = base64.urlsafe_b64encode(header_json).decode().rstrip("=")
+def generate_jwt_token(secret, role, expiry_years=10):
+    """Generate a JWT token with the given role and expiry."""
+    now = datetime.datetime.now()
+    iat = int(now.timestamp())
+    exp = int((now + datetime.timedelta(days=365 * expiry_years)).timestamp())
     
-    # Create payload
-    payload_json = json.dumps(payload, separators=(",", ":")).encode()
-    payload_b64 = base64.urlsafe_b64encode(payload_json).decode().rstrip("=")
-    
-    # Create signature
-    signature_input = f"{header_b64}.{payload_b64}".encode()
-    signature = hmac.new(secret.encode(), signature_input, hashlib.sha256).digest()
-    signature_b64 = base64.urlsafe_b64encode(signature).decode().rstrip("=")
-    
-    # Combine to create JWT
-    return f"{header_b64}.{payload_b64}.{signature_b64}"
-
-def generate_anon_key(jwt_secret):
-    """Generate an anonymous API key."""
-    # Set expiry to a far future date (10 years from now)
-    exp = int((datetime.now() + timedelta(days=3650)).timestamp())
-    
-    # Create payload for anon key
     payload = {
-        "role": "anon",
+        "role": role,
         "iss": "supabase",
-        "iat": int(time.time()),
+        "iat": iat,
         "exp": exp
     }
     
-    return create_jwt_token(payload, jwt_secret)
+    return jwt.encode(payload, secret, algorithm="HS256")
 
-def generate_service_key(jwt_secret):
-    """Generate a service role API key."""
-    # Set expiry to a far future date (10 years from now)
-    exp = int((datetime.now() + timedelta(days=3650)).timestamp())
-    
-    # Create payload for service role key
-    payload = {
-        "role": "service_role",
-        "iss": "supabase",
-        "iat": int(time.time()),
-        "exp": exp
-    }
-    
-    return create_jwt_token(payload, jwt_secret)
-
-def update_env_file(env_path, jwt_secret, anon_key, service_key):
-    """Update an existing .env file with new keys."""
-    if not os.path.exists(env_path):
-        print(f"Error: .env file not found at {env_path}")
+def update_env_file(env_file, jwt_secret, anon_key, service_key):
+    """Update the .env file with the new keys."""
+    if not os.path.exists(env_file):
+        print(f"Error: .env file not found at {env_file}")
         return False
     
     # Create a backup of the original .env file
-    backup_path = f"{env_path}.bak.{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    shutil.copy2(env_path, backup_path)
-    print(f"Created backup of .env file: {backup_path}")
+    backup_file = f"{env_file}.bak.{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+    try:
+        with open(env_file, 'r') as f:
+            original_content = f.read()
+        
+        with open(backup_file, 'w') as f:
+            f.write(original_content)
+        
+        # Update the keys in the content
+        updated_content = re.sub(
+            r'^JWT_SECRET=.*$',
+            f'JWT_SECRET={jwt_secret}',
+            original_content,
+            flags=re.MULTILINE
+        )
+        
+        updated_content = re.sub(
+            r'^ANON_KEY=.*$',
+            f'ANON_KEY={anon_key}',
+            updated_content,
+            flags=re.MULTILINE
+        )
+        
+        updated_content = re.sub(
+            r'^SERVICE_ROLE_KEY=.*$',
+            f'SERVICE_ROLE_KEY={service_key}',
+            updated_content,
+            flags=re.MULTILINE
+        )
+        
+        # Write the updated content back to the .env file
+        with open(env_file, 'w') as f:
+            f.write(updated_content)
+        
+        print(f"Created backup of .env file: {backup_file}")
+        print(f"Updated .env file with new keys: {env_file}")
+        return True
     
-    # Read the current .env file
-    with open(env_path, 'r') as f:
-        env_content = f.read()
-    
-    # Update JWT secret and API keys
-    env_content = re.sub(
-        r'JWT_SECRET=.*',
-        f'JWT_SECRET={jwt_secret}',
-        env_content
-    )
-    env_content = re.sub(
-        r'ANON_KEY=.*',
-        f'ANON_KEY={anon_key}',
-        env_content
-    )
-    env_content = re.sub(
-        r'SERVICE_ROLE_KEY=.*',
-        f'SERVICE_ROLE_KEY={service_key}',
-        env_content
-    )
-    
-    # Write the updated .env file
-    with open(env_path, 'w') as f:
-        f.write(env_content)
-    
-    print(f"Updated .env file with new keys: {env_path}")
-    return True
+    except Exception as e:
+        print(f"Error updating .env file: {e}")
+        return False
 
-def generate_keys(args):
-    """Generate new keys and optionally update an .env file."""
+def main():
+    """Main entry point for the script."""
+    parser = argparse.ArgumentParser(description="Generate secure API keys for Supabase")
+    parser.add_argument("--env-file", help="Path to .env file to update")
+    parser.add_argument("--jwt-length", type=int, default=40, help="Length of JWT secret")
+    parser.add_argument("--expiry-years", type=int, default=10, help="Expiry in years for JWT tokens")
+    
+    args = parser.parse_args()
+    
     # Generate JWT secret
-    jwt_secret = generate_jwt_secret()
+    jwt_secret = generate_jwt_secret(args.jwt_length)
     
     # Generate API keys
-    anon_key = generate_anon_key(jwt_secret)
-    service_key = generate_service_key(jwt_secret)
+    anon_key = generate_jwt_token(jwt_secret, "anon", args.expiry_years)
+    service_key = generate_jwt_token(jwt_secret, "service_role", args.expiry_years)
     
-    # Display the generated keys
+    # Print the generated keys
     print("\nGenerated Keys:")
     print("=" * 50)
     print(f"JWT Secret: {jwt_secret}")
@@ -146,19 +120,6 @@ def generate_keys(args):
         print("2. Update your client applications with the new API keys")
     
     return 0
-
-def setup_parser():
-    """Set up the argument parser."""
-    parser = argparse.ArgumentParser(description="Supabase Key Generator")
-    parser.add_argument("--env-file", "-e", help="Path to .env file to update with new keys")
-    return parser
-
-def main():
-    """Main entry point for the Supabase key generator."""
-    parser = setup_parser()
-    args = parser.parse_args()
-    
-    return generate_keys(args)
 
 if __name__ == "__main__":
     sys.exit(main())

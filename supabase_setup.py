@@ -18,9 +18,9 @@ from pathlib import Path
 class SupabaseProjectGenerator:
     def __init__(self, project_name, base_port=None):
         """Initialize the generator with project name and optional base port."""
-        self.project_name = project_name
-        self.base_port = base_port
         self.project_dir = Path(project_name)
+        self.project_name = self.project_dir.name  # Use only the base name for Compose volume names
+        self.base_port = base_port
         
         # Calculate ports
         self.ports = self._calculate_ports()
