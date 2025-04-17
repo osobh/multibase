@@ -9,6 +9,28 @@ This repository provides a robust, secure, and reproducible workflow for creatin
 All Supabase deployments are created inside a dedicated `projects/` directory.  
 Each deployment is isolated in its own subdirectory:
 
+---
+
+## File Descriptions
+
+- **setup_secure_supabase.sh**: Main setup script. Orchestrates project creation, prompts for credentials, generates keys, and starts Docker Compose.
+- **supabase_manager.py**: Project management CLI. Handles create, start, stop, reset, status, and list commands for deployments.
+- **supabase_setup.py**: Python project generator. Creates the directory structure and all config/template files for a new deployment.
+- **generate_keys.py**: Generates secure API keys and updates the `.env` file for each deployment.
+- **requirements.txt**: Python dependencies required for the management scripts.
+- **sample_security_policies.sql**: Example Row Level Security (RLS) policies for your database.
+- **security_checklist.md**: Security best practices and checklist for your deployment.
+- **vector.yml**: Default Vector logging configuration template.
+- **update_security.py**: (If present) Script for updating security settings or policies.
+- **test_security.py**: (If present) Script for testing security policies or deployment.
+- **README.md**: This documentation file.
+- **.gitignore**: Ensures secrets and environment files in `projects/` are not committed to version control.
+
+**Project directories** (under `/projects/<project-name>/`) contain:
+- `docker-compose.yml`, `.env`, `volumes/`, `sample_security_policies.sql`, `security_checklist.md`, and a project-specific `README.md`.
+
+---
+
 ```
 /projects
   /myproject
