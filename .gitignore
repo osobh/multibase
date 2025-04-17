@@ -1,8 +1,12 @@
+.env
+*env/
+*env*
 # Python cache files
 supabase/
 *supabase
 # Projects directory (contains deployment secrets)
 projects/
+*projects/*
 __pycache__/
 *.py[cod]
 *$py.class
