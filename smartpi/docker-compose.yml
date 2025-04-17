@@ -7,7 +7,7 @@ services:
     image: supabase/studio:20250317-6955350
     restart: unless-stopped
     ports:
-      - "10565:3000"
+      - "6048:3000"
     environment:
       STUDIO_PG_META_URL: http://meta:8080
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -31,8 +31,8 @@ services:
     image: kong:2.8.1
     restart: unless-stopped
     ports:
-      - "8565:8000/tcp"
-      - "9008:8443/tcp"
+      - "4048:8000/tcp"
+      - "4491:8443/tcp"
     volumes:
       - ./volumes/api/kong.yml:/home/kong/temp.yml:ro,z
     depends_on:
@@ -282,7 +282,7 @@ services:
     image: supabase/logflare:1.12.0
     restart: unless-stopped
     ports:
-      - "11565:4000"
+      - "7048:4000"
     healthcheck:
       test:
         [
@@ -347,7 +347,7 @@ services:
       vector:
         condition: service_healthy
     ports:
-      - "9565:5432"
+      - "5048:5432"
     environment:
       POSTGRES_HOST: /var/run/postgresql
       PGPORT: 5432
@@ -402,7 +402,7 @@ services:
     image: supabase/supavisor:2.4.14
     restart: unless-stopped
     ports:
-      - "9566:6543"
+      - "5049:6543"
     volumes:
       - ./volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro,z
     healthcheck:

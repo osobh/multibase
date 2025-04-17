@@ -1,4 +1,6 @@
 # Python cache files
+supabase/
+*supabase
 __pycache__/
 *.py[cod]
 *$py.class
