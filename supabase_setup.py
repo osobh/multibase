@@ -69,7 +69,7 @@ serve((_req) => new Response("Hello from Edge Functions!"));
         (self.project_dir / "docker-compose.yml").write_text(self.templates["docker_compose"])
         (self.project_dir / ".env").write_text(self.templates["env"])
         (self.project_dir / "volumes/api/kong.yml").write_text(self.templates["kong"])
-        (self.project_dir / "volumes/logs/vector.yml").write_text(self.templates["vector"])
+        self._write_vector_config()  # Use the dynamic vector config method
         (self.project_dir / "volumes/pooler/pooler.exs").write_text(self.templates["pooler"])
         (self.project_dir / "volumes/db/_supabase.sql").write_text(self.templates["supabase_sql"])
         (self.project_dir / "volumes/db/logs.sql").write_text(self.templates["logs_sql"])
@@ -81,6 +81,25 @@ serve((_req) => new Response("Hello from Edge Functions!"));
         (self.project_dir / "volumes/functions/main").write_text(self.templates["function_main"])
         (self.project_dir / "reset.sh").write_text(self.templates["reset_script"])
         (self.project_dir / "README.md").write_text(self.templates["readme"])
+        
+    def _write_vector_config(self):
+        """Write the vector.yml config with dynamic project/service names."""
+        vector_template = self.templates["vector"]
+        project_name = self.project_name
+        analytics_service = f"{project_name}-analytics"
+        kong_service = f"{project_name}-kong"
+        
+        # Replace placeholders
+        vector_config = (
+            vector_template
+            .replace("__PROJECT__", project_name)
+            .replace("__ANALYTICS_SERVICE__", analytics_service)
+            .replace("__KONG_SERVICE__", kong_service)
+        )
+        
+        # Write to the project directory
+        vector_path = self.project_dir / "volumes/logs/vector.yml"
+        vector_path.write_text(vector_config)
 
     def _create_project_directory(self):
         """Create the project directory if it doesn't exist."""
@@ -705,7 +724,86 @@ GOOGLE_PROJECT_NUMBER=GOOGLE_PROJECT_NUMBER"""
 
     def _init_vector_template(self):
         """Initialize vector.yml template."""
-        self.templates["vector"] = """# Default Vector configuration for Supabase
+        try:
+            # Try to read the template from the file
+            vector_path = Path("projects/multibase/vector.yml")
+            if vector_path.exists():
+                self.templates["vector"] = vector_path.read_text()
+                print(f"Using vector.yml template from {vector_path}")
+            else:
+                # Fallback to the default template if file doesn't exist
+                self.templates["vector"] = """# Default Vector configuration for Supabase
+api:
+  enabled: true
+  address: 0.0.0.0:9001
+
+# Data sources
+sources:
+  docker_host:
+    type: docker_logs
+    exclude_containers:
+      - __PROJECT__-vector # Exclude vector logs from being ingested by itself
+
+# Data transformations
+transforms:
+  project_logs:
+    type: remap
+    inputs:
+      - docker_host
+    source: |-
+      .project = "__PROJECT__"
+      .event_message = del(.message)
+      .appname = del(.container_name)
+      del(.container_created_at)
+      del(.container_id)
+      del(.source_type)
+      del(.stream)
+      del(.label)
+      del(.image)
+      del(.host)
+      del(.stream)
+  router:
+    type: route
+    inputs:
+      - project_logs
+    route:
+      kong: '.appname == "__PROJECT__-kong"'
+      auth: '.appname == "__PROJECT__-auth"'
+      rest: '.appname == "__PROJECT__-rest"'
+      realtime: '.appname == "__PROJECT__-realtime"'
+      storage: '.appname == "__PROJECT__-storage"'
+      functions: '.appname == "__PROJECT__-functions"'
+      db: '.appname == "__PROJECT__-db"'
+
+# Data destinations
+sinks:
+  console_sink:
+    type: console
+    inputs:
+      - project_logs
+    encoding:
+      codec: json
+    target: stdout
+
+  analytics:
+    type: http
+    inputs:
+      - project_logs
+    encoding:
+      codec: json
+    uri: http://__ANALYTICS_SERVICE__:4000/api/logs
+    method: post
+    auth:
+      strategy: bearer
+      token: "${LOGFLARE_API_KEY}"
+    request:
+      headers:
+        Content-Type: application/json"""
+                print("Using default vector.yml template with placeholders")
+        except Exception as e:
+            print(f"Error loading vector template: {e}")
+            # Fallback to a minimal template
+            self.templates["vector"] = """# Default Vector configuration for Supabase
 api:
   enabled: true
   address: 0.0.0.0:9001
@@ -714,7 +812,7 @@ api:
 sources:
   docker_syslog:
     type: docker_logs
-    docker_host: unix:///var/run/docker.sock  # Hardcoded path
+    docker_host: unix:///var/run/docker.sock
 
 # Data transformations
 transforms:
@@ -723,7 +821,6 @@ transforms:
     inputs:
       - docker_syslog
     source: |
-      # Simply store the message and metadata
       .parsed = .message
       .container_name = .container_name
       .timestamp = .timestamp
@@ -743,7 +840,7 @@ sinks:
       - parse_logs
     encoding:
       codec: json
-    uri: http://analytics:4000/api/logs
+    uri: http://__ANALYTICS_SERVICE__:4000/api/logs
     method: post
     auth:
       strategy: bearer
@@ -751,6 +848,7 @@ sinks:
     request:
       headers:
         Content-Type: application/json"""
+            print("Using minimal vector.yml template with analytics placeholder")
 
     def _init_kong_template(self):
         """Initialize Kong API Gateway configuration."""

@@ -6,7 +6,7 @@ sources:
   docker_host:
     type: docker_logs
     exclude_containers:
-      - supabase-vector # Exclude vector logs from being ingested by itself
+      - __PROJECT__-vector # Exclude vector logs from being ingested by itself
 
 transforms:
   project_logs:
@@ -14,7 +14,7 @@ transforms:
     inputs:
       - docker_host
     source: |-
-      .project = "default"
+      .project = "__PROJECT__"
       .event_message = del(.message)
       .appname = del(.container_name)
       del(.container_created_at)
@@ -30,14 +30,14 @@ transforms:
     inputs:
       - project_logs
     route:
-      kong: '.appname == "supabase-kong"'
-      auth: '.appname == "supabase-auth"'
-      rest: '.appname == "supabase-rest"'
-      realtime: '.appname == "supabase-realtime"'
-      storage: '.appname == "supabase-storage"'
-      functions: '.appname == "supabase-functions"'
-      db: '.appname == "supabase-db"'
-  # Ignores non nginx errors since they are related with kong booting up
+      kong: '.appname == "__PROJECT__-kong"'
+      auth: '.appname == "__PROJECT__-auth"'
+      rest: '.appname == "__PROJECT__-rest"'
+      realtime: '.appname == "__PROJECT__-realtime"'
+      storage: '.appname == "__PROJECT__-storage"'
+      functions: '.appname == "__PROJECT__-functions"'
+      db: '.appname == "__PROJECT__-db"'
+
   kong_logs:
     type: remap
     inputs:
@@ -57,7 +57,6 @@ transforms:
       if err != null {
         abort
       }
-  # Ignores non nginx errors since they are related with kong booting up
   kong_err:
     type: remap
     inputs:
@@ -81,7 +80,6 @@ transforms:
       if err != null {
         abort
       }
-  # Gotrue logs are structured json strings which frontend parses directly. But we keep metadata for consistency.
   auth_logs:
     type: remap
     inputs:
@@ -92,7 +90,6 @@ transforms:
           .metadata.timestamp = parsed.time
           .metadata = merge!(.metadata, parsed)
       }
-  # PostgREST logs are structured so we separate timestamp from message using regex
   rest_logs:
     type: remap
     inputs:
@@ -101,10 +98,9 @@ transforms:
       parsed, err = parse_regex(.event_message, r'^(?P<time>.*): (?P<msg>.*)$')
       if err == null {
           .event_message = parsed.msg
-          .timestamp = parsed.time  # Fixed: Just use the raw timestamp string
+          .timestamp = parsed.time
           .metadata.host = .project
       }
-  # Realtime logs are structured so we parse the severity level using regex (ignore time because it has no date)
   realtime_logs:
     type: remap
     inputs:
@@ -117,7 +113,6 @@ transforms:
           .event_message = parsed.msg
           .metadata.level = parsed.level
       }
-  # Storage logs may contain json objects so we parse them for completeness
   storage_logs:
     type: remap
     inputs:
@@ -133,17 +128,14 @@ transforms:
           .metadata.context[0].host = parsed.hostname
           .metadata.context[0].pid = parsed.pid
       }
-  # Postgres logs some messages to stderr which we map to warning severity level
   db_logs:
     type: remap
     inputs:
       - router.db
     source: |-
-      .metadata.host = "db-default"
+      .metadata.host = "db-__PROJECT__"
       .metadata.parsed.timestamp = .timestamp
-
       parsed, err = parse_regex(.event_message, r'.*(?P<level>INFO|NOTICE|WARNING|ERROR|LOG|FATAL|PANIC?):.*', numeric_groups: true)
-
       if err != null || parsed == null {
         .metadata.parsed.error_severity = "info"
       }
@@ -156,7 +148,6 @@ transforms:
       .metadata.parsed.error_severity = upcase!(.metadata.parsed.error_severity)
 
 sinks:
-  # Primary console sink that doesn't depend on environment variables
   console_sink:
     type: console
     inputs:
@@ -165,7 +156,6 @@ sinks:
       codec: json
     target: stdout
 
-  # Default sink for unmatched logs
   default_logs:
     type: console
     inputs:
@@ -174,78 +164,74 @@ sinks:
       codec: json
     target: stdout
 
-  # Main sinks for service logs
   logflare_auth:
-    type: 'http'
+    type: "http"
     inputs:
       - auth_logs
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
-    uri: 'http://analytics:4000/api/logs?source_name=gotrue.logs.prod&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}'
+    uri: "http://__ANALYTICS_SERVICE__:4000/api/logs?source_name=gotrue.logs.prod&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}"
   logflare_realtime:
-    type: 'http'
+    type: "http"
     inputs:
       - realtime_logs
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
-    uri: 'http://analytics:4000/api/logs?source_name=realtime.logs.prod&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}'
+    uri: "http://__ANALYTICS_SERVICE__:4000/api/logs?source_name=realtime.logs.prod&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}"
   logflare_rest:
-    type: 'http'
+    type: "http"
     inputs:
       - rest_logs
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
-    uri: 'http://analytics:4000/api/logs?source_name=postgREST.logs.prod&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}'
+    uri: "http://__ANALYTICS_SERVICE__:4000/api/logs?source_name=postgREST.logs.prod&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}"
   logflare_db:
-    type: 'http'
+    type: "http"
     inputs:
       - db_logs
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
-    # We must route the sink through kong because ingesting logs before logflare is fully initialised will
-    # lead to broken queries from studio. This works by the assumption that containers are started in the
-    # following order: vector > db > logflare > kong
-    uri: 'http://kong:8000/analytics/v1/api/logs?source_name=postgres.logs&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}'
+    uri: "http://__KONG_SERVICE__:8000/analytics/v1/api/logs?source_name=postgres.logs&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}"
   logflare_functions:
-    type: 'http'
+    type: "http"
     inputs:
       - router.functions
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
-    uri: 'http://analytics:4000/api/logs?source_name=deno-relay-logs&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}'
+    uri: "http://__ANALYTICS_SERVICE__:4000/api/logs?source_name=deno-relay-logs&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}"
   logflare_storage:
-    type: 'http'
+    type: "http"
     inputs:
       - storage_logs
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
-    uri: 'http://analytics:4000/api/logs?source_name=storage.logs.prod.2&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}'
+    uri: "http://__ANALYTICS_SERVICE__:4000/api/logs?source_name=storage.logs.prod.2&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}"
   logflare_kong:
-    type: 'http'
+    type: "http"
     inputs:
       - kong_logs
       - kong_err
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
-    uri: 'http://analytics:4000/api/logs?source_name=cloudflare.logs.prod&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}'
+    uri: "http://__ANALYTICS_SERVICE__:4000/api/logs?source_name=cloudflare.logs.prod&api_key=${LOGFLARE_API_KEY:-dummy_key_for_validation}"
