@@ -170,17 +170,17 @@ services:
     ports:
       - "{self.ports['studio']}:3000"
     environment:
-      STUDIO_PG_META_URL: http://meta:8080
+      STUDIO_PG_META_URL: http://{self.project_name}-meta:8080
       POSTGRES_PASSWORD: ${{POSTGRES_PASSWORD}}
       DEFAULT_ORGANIZATION_NAME: ${{STUDIO_DEFAULT_ORGANIZATION}}
       DEFAULT_PROJECT_NAME: ${{STUDIO_DEFAULT_PROJECT}}
-      SUPABASE_URL: http://kong:8000
+      SUPABASE_URL: http://{self.project_name}-kong:8000
       SUPABASE_PUBLIC_URL: ${{SUPABASE_PUBLIC_URL}}
       SUPABASE_ANON_KEY: ${{ANON_KEY}}
       SUPABASE_SERVICE_KEY: ${{SERVICE_ROLE_KEY}}
       AUTH_JWT_SECRET: ${{JWT_SECRET}}
       LOGFLARE_API_KEY: ${{LOGFLARE_API_KEY}}
-      LOGFLARE_URL: http://analytics:4000
+      LOGFLARE_URL: http://{self.project_name}-analytics:4000
       NEXT_PUBLIC_ENABLE_LOGS: true
       NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
     depends_on:
@@ -346,7 +346,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://storage:5000/status"
+          "http://{self.project_name}-storage:5000/status"
         ]
       timeout: 5s
       interval: 5s
@@ -361,7 +361,7 @@ services:
     environment:
       ANON_KEY: ${{ANON_KEY}}
       SERVICE_KEY: ${{SERVICE_ROLE_KEY}}
-      POSTGREST_URL: http://rest:3000
+      POSTGREST_URL: http://{self.project_name}-rest:3000
       PGRST_JWT_SECRET: ${{JWT_SECRET}}
       # Use the internal port for PostgreSQL (5432) for container-to-container communication
       DATABASE_URL: postgres://supabase_storage_admin:${{POSTGRES_PASSWORD}}@${{POSTGRES_HOST}}:5432/${{POSTGRES_DB}}
@@ -372,7 +372,7 @@ services:
       REGION: stub
       GLOBAL_S3_BUCKET: stub
       ENABLE_IMAGE_TRANSFORMATION: "true"
-      IMGPROXY_URL: http://imgproxy:5001
+      IMGPROXY_URL: http://{self.project_name}-imgproxy:5001
 
   imgproxy:
     container_name: {self.project_name}-imgproxy
@@ -425,7 +425,7 @@ services:
         condition: service_healthy
     environment:
       JWT_SECRET: ${{JWT_SECRET}}
-      SUPABASE_URL: http://kong:8000
+      SUPABASE_URL: http://{self.project_name}-kong:8000
       SUPABASE_ANON_KEY: ${{ANON_KEY}}
       SUPABASE_SERVICE_ROLE_KEY: ${{SERVICE_ROLE_KEY}}
       # Use the internal port for PostgreSQL (5432) for container-to-container communication
@@ -544,7 +544,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://vector:9001/health"
+          "http://{self.project_name}-vector:9001/health"
         ]
       timeout: 5s
       interval: 5s
@@ -592,7 +592,7 @@ services:
       POSTGRES_DB: ${{POSTGRES_DB}}
       POSTGRES_PASSWORD: ${{POSTGRES_PASSWORD}}
       # Use the internal port for PostgreSQL (5432) for container-to-container communication
-      DATABASE_URL: ecto://supabase_admin:${{POSTGRES_PASSWORD}}@db:5432/_supabase
+      DATABASE_URL: ecto://supabase_admin:${{POSTGRES_PASSWORD}}@{self.project_name}-db:5432/_supabase
       CLUSTER_POSTGRES: true
       SECRET_KEY_BASE: ${{SECRET_KEY_BASE}}
       VAULT_ENC_KEY: ${{VAULT_ENC_KEY}}
@@ -644,7 +644,7 @@ VAULT_ENC_KEY={vault_enc_key}
 # Database - You can change these to any PostgreSQL database that has logical replication enabled.
 ############
 # This is where other containers connect to the DB container internally
-POSTGRES_HOST=db
+POSTGRES_HOST={self.project_name}-db
 POSTGRES_DB=postgres
 # This port is used for external connections from your host
 POSTGRES_PORT={self.ports['postgres']}
@@ -683,7 +683,7 @@ MAILER_URLPATHS_EMAIL_CHANGE="/auth/v1/verify"
 ENABLE_EMAIL_SIGNUP=true
 ENABLE_EMAIL_AUTOCONFIRM=true
 SMTP_ADMIN_EMAIL=admin@example.com
-SMTP_HOST=supabase-mail
+SMTP_HOST={self.project_name}-mail
 SMTP_PORT=2500
 SMTP_USER=fake_mail_user
 SMTP_PASS=fake_mail_password
@@ -726,7 +726,10 @@ GOOGLE_PROJECT_NUMBER=GOOGLE_PROJECT_NUMBER"""
         """Initialize vector.yml template."""
         try:
             # Try to read the template from the file
-            vector_path = Path("projects/multibase/vector.yml")
+            # Use absolute path if available, otherwise try relative path
+            vector_path = Path("/home/osobh/projects/multibase/vector.yml")
+            if not vector_path.exists():
+                vector_path = Path("projects/multibase/vector.yml")
             if vector_path.exists():
                 self.templates["vector"] = vector_path.read_text()
                 print(f"Using vector.yml template from {vector_path}")
@@ -882,7 +885,7 @@ basicauth_credentials:
 
 services:
   - name: auth-v1
-    url: http://auth:9999/verify
+    url: http://{self.project_name}-auth:9999/verify
     routes:
       - name: auth-v1-route
         paths:
@@ -890,7 +893,7 @@ services:
     plugins:
       - name: cors
   - name: auth-v1-api
-    url: http://auth:9999
+    url: http://{self.project_name}-auth:9999
     routes:
       - name: auth-v1-api-route
         paths:
@@ -898,7 +901,7 @@ services:
     plugins:
       - name: cors
   - name: auth-v1-admin
-    url: http://auth:9999/admin
+    url: http://{self.project_name}-auth:9999/admin
     routes:
       - name: auth-v1-admin-route
         paths:
@@ -914,7 +917,7 @@ services:
           allow:
             - admin
   - name: rest
-    url: http://rest:3000
+    url: http://{self.project_name}-rest:3000
     routes:
       - name: rest-route
         paths:
@@ -922,7 +925,7 @@ services:
     plugins:
       - name: cors
   - name: postgrest
-    url: http://rest:3000
+    url: http://{self.project_name}-rest:3000
     routes:
       - name: postgrest-route
         paths:
@@ -931,7 +934,7 @@ services:
     plugins:
       - name: cors
   - name: realtime
-    url: http://realtime:4000/socket/
+    url: http://{self.project_name}-realtime:4000/socket/
     routes:
       - name: realtime-route
         paths:
@@ -940,7 +943,7 @@ services:
     plugins:
       - name: cors
   - name: storage
-    url: http://storage:5000
+    url: http://{self.project_name}-storage:5000
     routes:
       - name: storage-route
         paths:
@@ -948,7 +951,7 @@ services:
     plugins:
       - name: cors
   - name: meta
-    url: http://meta:8080
+    url: http://{self.project_name}-meta:8080
     routes:
       - name: meta-route
         paths:
@@ -964,7 +967,7 @@ services:
           allow:
             - admin
   - name: functions
-    url: http://functions:9000
+    url: http://{self.project_name}-edge-functions:9000
     routes:
       - name: functions-route
         paths:
@@ -993,7 +996,7 @@ services:
 
 params = %{
   "external_id" => System.get_env("POOLER_TENANT_ID"),
-  "db_host" => "db",
+  "db_host" => "{self.project_name}-db",
   "db_port" => System.get_env("POSTGRES_PORT"),
   "db_database" => System.get_env("POSTGRES_DB"),
   "require_user" => false,

@@ -7,6 +7,8 @@ sources:
     type: docker_logs
     exclude_containers:
       - __PROJECT__-vector # Exclude vector logs from being ingested by itself
+    include_containers:
+      - "__PROJECT__-*" # Only include containers from this project
 
 transforms:
   project_logs:
