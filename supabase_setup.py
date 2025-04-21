@@ -898,6 +898,13 @@ services:
           - /auth/v1/verify
     plugins:
       - name: cors
+        config:
+          origins: "*"
+          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
+          exposed_headers: "Content-Length, Content-Range"
+          credentials: true
+          max_age: 3600
   - name: auth-v1-api
     url: http://{self.project_name}-auth:9999
     routes:
@@ -906,6 +913,13 @@ services:
           - /auth/v1
     plugins:
       - name: cors
+        config:
+          origins: "*"
+          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
+          exposed_headers: "Content-Length, Content-Range"
+          credentials: true
+          max_age: 3600
   - name: auth-v1-admin
     url: http://{self.project_name}-auth:9999/admin
     routes:
@@ -914,6 +928,13 @@ services:
           - /auth/v1/admin
     plugins:
       - name: cors
+        config:
+          origins: "*"
+          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
+          exposed_headers: "Content-Length, Content-Range"
+          credentials: true
+          max_age: 3600
       - name: key-auth
         config:
           hide_credentials: true
@@ -930,6 +951,13 @@ services:
           - /rest/v1
     plugins:
       - name: cors
+        config:
+          origins: "*"
+          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
+          exposed_headers: "Content-Length, Content-Range"
+          credentials: true
+          max_age: 3600
   - name: postgrest
     url: http://{self.project_name}-rest:3000
     routes:
@@ -939,6 +967,13 @@ services:
         strip_path: false
     plugins:
       - name: cors
+        config:
+          origins: "*"
+          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
+          exposed_headers: "Content-Length, Content-Range"
+          credentials: true
+          max_age: 3600
   - name: realtime
     url: http://{self.project_name}-realtime:4000/socket/
     routes:
@@ -948,6 +983,13 @@ services:
         strip_path: true
     plugins:
       - name: cors
+        config:
+          origins: "*"
+          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
+          exposed_headers: "Content-Length, Content-Range"
+          credentials: true
+          max_age: 3600
   - name: storage
     url: http://{self.project_name}-storage:5000
     routes:
@@ -956,6 +998,13 @@ services:
           - /storage/v1
     plugins:
       - name: cors
+        config:
+          origins: "*"
+          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
+          exposed_headers: "Content-Length, Content-Range"
+          credentials: true
+          max_age: 3600
   - name: meta
     url: http://{self.project_name}-meta:8080
     routes:
@@ -964,6 +1013,13 @@ services:
           - /pg
     plugins:
       - name: cors
+        config:
+          origins: "*"
+          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
+          exposed_headers: "Content-Length, Content-Range"
+          credentials: true
+          max_age: 3600
       - name: key-auth
         config:
           hide_credentials: true
@@ -980,6 +1036,13 @@ services:
           - /functions/v1
     plugins:
       - name: cors
+        config:
+          origins: "*"
+          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
+          exposed_headers: "Content-Length, Content-Range"
+          credentials: true
+          max_age: 3600
 """
 
     def _extract_env_value(self, key):
