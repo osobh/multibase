@@ -21,6 +21,13 @@ class SupabaseProjectGenerator:
         self.project_dir = Path(project_name)
         self.project_name = self.project_dir.name  # Use only the base name for Compose volume names
         self.base_port = base_port
+
+        # Prompt for CORS origin
+        protocol = input("Enter the protocol for your domain (http or https): ").strip()
+        if not protocol.endswith("://"):
+            protocol += "://"
+        domain = input("Enter your domain (e.g., example.com): ").strip()
+        self.origin = f"{protocol}{domain}"
         
         # Calculate ports
         self.ports = self._calculate_ports()
@@ -865,6 +872,7 @@ sinks:
         service_key = self._extract_env_value("SERVICE_ROLE_KEY")
         dashboard_username = self._extract_env_value("DASHBOARD_USERNAME")
         dashboard_password = self._extract_env_value("DASHBOARD_PASSWORD")
+        origin = self.origin
 
         self.templates["kong"] = f"""_format_version: '2.1'
 _transform: true
@@ -899,10 +907,24 @@ services:
     plugins:
       - name: cors
         config:
-          origins: "*"
-          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
-          exposed_headers: "Content-Length, Content-Range"
+          origins:
+            - {origin}
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - X-Requested-With
+            - apikey
+          exposed_headers:
+            - Content-Length
+            - Content-Range
           credentials: true
           max_age: 3600
   - name: auth-v1-api
@@ -914,10 +936,24 @@ services:
     plugins:
       - name: cors
         config:
-          origins: "*"
-          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
-          exposed_headers: "Content-Length, Content-Range"
+          origins:
+            - {origin}
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - X-Requested-With
+            - apikey
+          exposed_headers:
+            - Content-Length
+            - Content-Range
           credentials: true
           max_age: 3600
   - name: auth-v1-admin
@@ -929,10 +965,24 @@ services:
     plugins:
       - name: cors
         config:
-          origins: "*"
-          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
-          exposed_headers: "Content-Length, Content-Range"
+          origins:
+            - {origin}
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - X-Requested-With
+            - apikey
+          exposed_headers:
+            - Content-Length
+            - Content-Range
           credentials: true
           max_age: 3600
       - name: key-auth
@@ -952,10 +1002,24 @@ services:
     plugins:
       - name: cors
         config:
-          origins: "*"
-          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
-          exposed_headers: "Content-Length, Content-Range"
+          origins:
+            - {origin}
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - X-Requested-With
+            - apikey
+          exposed_headers:
+            - Content-Length
+            - Content-Range
           credentials: true
           max_age: 3600
   - name: postgrest
@@ -968,10 +1032,24 @@ services:
     plugins:
       - name: cors
         config:
-          origins: "*"
-          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
-          exposed_headers: "Content-Length, Content-Range"
+          origins:
+            - {origin}
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - X-Requested-With
+            - apikey
+          exposed_headers:
+            - Content-Length
+            - Content-Range
           credentials: true
           max_age: 3600
   - name: realtime
@@ -984,10 +1062,24 @@ services:
     plugins:
       - name: cors
         config:
-          origins: "*"
-          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
-          exposed_headers: "Content-Length, Content-Range"
+          origins:
+            - {origin}
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - X-Requested-With
+            - apikey
+          exposed_headers:
+            - Content-Length
+            - Content-Range
           credentials: true
           max_age: 3600
   - name: storage
@@ -999,10 +1091,24 @@ services:
     plugins:
       - name: cors
         config:
-          origins: "*"
-          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
-          exposed_headers: "Content-Length, Content-Range"
+          origins:
+            - {origin}
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - X-Requested-With
+            - apikey
+          exposed_headers:
+            - Content-Length
+            - Content-Range
           credentials: true
           max_age: 3600
   - name: meta
@@ -1014,10 +1120,24 @@ services:
     plugins:
       - name: cors
         config:
-          origins: "*"
-          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
-          exposed_headers: "Content-Length, Content-Range"
+          origins:
+            - {origin}
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - X-Requested-With
+            - apikey
+          exposed_headers:
+            - Content-Length
+            - Content-Range
           credentials: true
           max_age: 3600
       - name: key-auth
@@ -1037,10 +1157,24 @@ services:
     plugins:
       - name: cors
         config:
-          origins: "*"
-          methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-          headers: "Accept, Authorization, Content-Type, X-Requested-With, apikey"
-          exposed_headers: "Content-Length, Content-Range"
+          origins:
+            - {origin}
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - X-Requested-With
+            - apikey
+          exposed_headers:
+            - Content-Length
+            - Content-Range
           credentials: true
           max_age: 3600
 """
