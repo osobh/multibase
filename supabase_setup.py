@@ -167,6 +167,12 @@ services:
     container_name: {self.project_name}-studio
     image: supabase/studio:latest
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "echo ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     ports:
       - "{self.ports['studio']}:3000"
     environment:
