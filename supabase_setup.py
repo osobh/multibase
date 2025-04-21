@@ -923,6 +923,8 @@ services:
             - X-Requested-With
             - apikey
             - x-supabase-api-version
+            - x-client-info
+            - accept-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -952,6 +954,9 @@ services:
             - Content-Type
             - X-Requested-With
             - apikey
+            - x-supabase-api-version
+            - x-client-info
+            - accept-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -981,6 +986,9 @@ services:
             - Content-Type
             - X-Requested-With
             - apikey
+            - x-supabase-api-version
+            - x-client-info
+            - accept-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1018,6 +1026,9 @@ services:
             - Content-Type
             - X-Requested-With
             - apikey
+            - x-supabase-api-version
+            - x-client-info
+            - accept-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1048,6 +1059,9 @@ services:
             - Content-Type
             - X-Requested-With
             - apikey
+            - x-supabase-api-version
+            - x-client-info
+            - accept-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1078,6 +1092,9 @@ services:
             - Content-Type
             - X-Requested-With
             - apikey
+            - x-supabase-api-version
+            - x-client-info
+            - accept-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1107,6 +1124,9 @@ services:
             - Content-Type
             - X-Requested-With
             - apikey
+            - x-supabase-api-version
+            - x-client-info
+            - accept-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1136,6 +1156,9 @@ services:
             - Content-Type
             - X-Requested-With
             - apikey
+            - x-supabase-api-version
+            - x-client-info
+            - accept-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1173,6 +1196,9 @@ services:
             - Content-Type
             - X-Requested-With
             - apikey
+            - x-supabase-api-version
+            - x-client-info
+            - accept-profile            
           exposed_headers:
             - Content-Length
             - Content-Range
