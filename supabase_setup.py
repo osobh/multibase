@@ -165,7 +165,7 @@ name: {self.project_name}
 services:
   studio:
     container_name: {self.project_name}-studio
-    image: supabase/studio:20250317-6955350
+    image: supabase/studio:latest
     restart: unless-stopped
     ports:
       - "{self.ports['studio']}:3000"
