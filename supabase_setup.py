@@ -925,6 +925,7 @@ services:
             - x-supabase-api-version
             - x-client-info
             - accept-profile
+            - content-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -957,6 +958,7 @@ services:
             - x-supabase-api-version
             - x-client-info
             - accept-profile
+            - content-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -989,6 +991,7 @@ services:
             - x-supabase-api-version
             - x-client-info
             - accept-profile
+            - content-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1029,6 +1032,7 @@ services:
             - x-supabase-api-version
             - x-client-info
             - accept-profile
+            - content-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1062,6 +1066,7 @@ services:
             - x-supabase-api-version
             - x-client-info
             - accept-profile
+            - content-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1095,6 +1100,7 @@ services:
             - x-supabase-api-version
             - x-client-info
             - accept-profile
+            - content-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1127,6 +1133,7 @@ services:
             - x-supabase-api-version
             - x-client-info
             - accept-profile
+            - content-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1159,6 +1166,7 @@ services:
             - x-supabase-api-version
             - x-client-info
             - accept-profile
+            - content-profile
           exposed_headers:
             - Content-Length
             - Content-Range
@@ -1199,6 +1207,7 @@ services:
             - x-supabase-api-version
             - x-client-info
             - accept-profile            
+            - content-profile
           exposed_headers:
             - Content-Length
             - Content-Range
