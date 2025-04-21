@@ -922,6 +922,7 @@ services:
             - Content-Type
             - X-Requested-With
             - apikey
+            - x-supabase-api-version
           exposed_headers:
             - Content-Length
             - Content-Range
