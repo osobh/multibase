@@ -926,9 +926,19 @@ services:
             - x-client-info
             - accept-profile
             - content-profile
+            - prefer
+            - Range
+            - Origin
+            - Referer
+            - Access-Control-Request-Headers
+            - Access-Control-Request-Method
           exposed_headers:
             - Content-Length
             - Content-Range
+            - accept-ranges
+            - Content-Type
+            - Content-Profile
+            - Range-Unit
           credentials: true
           max_age: 3600
   - name: auth-v1-api
@@ -959,9 +969,19 @@ services:
             - x-client-info
             - accept-profile
             - content-profile
+            - prefer
+            - Range
+            - Origin
+            - Referer
+            - Access-Control-Request-Headers
+            - Access-Control-Request-Method
           exposed_headers:
             - Content-Length
             - Content-Range
+            - accept-ranges
+            - Content-Type
+            - Content-Profile
+            - Range-Unit
           credentials: true
           max_age: 3600
   - name: auth-v1-admin
@@ -992,9 +1012,19 @@ services:
             - x-client-info
             - accept-profile
             - content-profile
+            - prefer
+            - Range
+            - Origin
+            - Referer
+            - Access-Control-Request-Headers
+            - Access-Control-Request-Method
           exposed_headers:
             - Content-Length
             - Content-Range
+            - accept-ranges
+            - Content-Type
+            - Content-Profile
+            - Range-Unit
           credentials: true
           max_age: 3600
       - name: key-auth
@@ -1033,9 +1063,19 @@ services:
             - x-client-info
             - accept-profile
             - content-profile
+            - prefer
+            - Range
+            - Origin
+            - Referer
+            - Access-Control-Request-Headers
+            - Access-Control-Request-Method
           exposed_headers:
             - Content-Length
             - Content-Range
+            - accept-ranges
+            - Content-Type
+            - Content-Profile
+            - Range-Unit
           credentials: true
           max_age: 3600
   - name: postgrest
