@@ -22,13 +22,26 @@ class SupabaseProjectGenerator:
         self.project_name = self.project_dir.name  # Use only the base name for Compose volume names
         self.base_port = base_port
 
-        # Prompt for CORS origin
-        protocol = input("Enter the protocol for your domain (http or https): ").strip()
-        if not protocol.endswith("://"):
-            protocol += "://"
-        domain = input("Enter your domain (e.g., example.com): ").strip()
-        self.origin = f"{protocol}{domain}"
-        
+        # Ask if running on localhost first
+        is_localhost = input("Is this setup for localhost? (Y/N): ").strip().upper()
+
+        if is_localhost == 'Y':
+            protocol = 'http://'
+            domain = 'localhost'
+            self.cors_origins_config = '*'  # Allow all origins for localhost (without extra quotes)
+            print("Defaulting to protocol: http")
+            print("Using domain: localhost")
+            print("Configuring CORS to allow all origins (*)")
+        else:
+            # Prompt for CORS origin if not localhost
+            protocol = input("Enter the protocol for your domain (http or https): ").strip()
+            if not protocol.endswith("://"):
+                protocol += "://"
+            domain = input("Enter your domain (e.g., example.com): ").strip()
+            self.cors_origins_config = f'{protocol}{domain}' # Use specific origin (without extra quotes)
+
+        self.origin = f"{protocol}{domain}" # Still set self.origin for potential other uses (.env)
+
         # Calculate ports
         self.ports = self._calculate_ports()
         
@@ -112,10 +125,10 @@ serve((_req) => new Response("Hello from Edge Functions!"));
     def _create_project_directory(self):
         """Create the project directory if it doesn't exist."""
         if self.project_dir.exists():
-            raise FileExistsError(f"Directory {self.project_name} already exists.")
+            raise FileExistsError(f"Directory {self.project_dir} already exists.")
         
         self.project_dir.mkdir(parents=True)
-        print(f"Created directory: {self.project_name}")
+        print(f"Created directory: {self.project_dir}")
 
     def _is_port_available(self, port):
         """Check if a port is available."""
@@ -873,7 +886,8 @@ sinks:
         service_key = self._extract_env_value("SERVICE_ROLE_KEY")
         dashboard_username = self._extract_env_value("DASHBOARD_USERNAME")
         dashboard_password = self._extract_env_value("DASHBOARD_PASSWORD")
-        origin = self.origin
+        # Use the dynamically set cors_origins_config here
+        cors_origins_setting = self.cors_origins_config 
 
         self.templates["kong"] = f"""_format_version: '2.1'
 _transform: true
@@ -909,7 +923,7 @@ services:
       - name: cors
         config:
           origins:
-            - {origin}
+            - {cors_origins_setting}
           methods:
             - GET
             - POST
@@ -952,7 +966,7 @@ services:
       - name: cors
         config:
           origins:
-            - {origin}
+            - {cors_origins_setting}
           methods:
             - GET
             - POST
@@ -995,7 +1009,7 @@ services:
       - name: cors
         config:
           origins:
-            - {origin}
+            - {cors_origins_setting}
           methods:
             - GET
             - POST
@@ -1046,7 +1060,7 @@ services:
       - name: cors
         config:
           origins:
-            - {origin}
+            - {cors_origins_setting}
           methods:
             - GET
             - POST
@@ -1090,7 +1104,7 @@ services:
       - name: cors
         config:
           origins:
-            - {origin}
+            - {cors_origins_setting}
           methods:
             - GET
             - POST
@@ -1124,7 +1138,7 @@ services:
       - name: cors
         config:
           origins:
-            - {origin}
+            - {cors_origins_setting}
           methods:
             - GET
             - POST
@@ -1157,7 +1171,7 @@ services:
       - name: cors
         config:
           origins:
-            - {origin}
+            - {cors_origins_setting}
           methods:
             - GET
             - POST
@@ -1190,7 +1204,7 @@ services:
       - name: cors
         config:
           origins:
-            - {origin}
+            - {cors_origins_setting}
           methods:
             - GET
             - POST
@@ -1231,7 +1245,7 @@ services:
       - name: cors
         config:
           origins:
-            - {origin}
+            - {cors_origins_setting}
           methods:
             - GET
             - POST

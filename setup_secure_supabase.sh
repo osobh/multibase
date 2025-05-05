@@ -18,7 +18,7 @@ fi
 PROJECT_NAME=$1
 BASE_PORT=$2
 
-# Define projects directory
+# Define projects directory - this matches what supabase_manager.py expects
 PROJECTS_DIR="projects"
 PROJECT_PATH="$PROJECTS_DIR/$PROJECT_NAME"
 
@@ -49,7 +49,7 @@ chmod +x supabase_manager.py supabase_setup.py update_security.py generate_keys.
 echo "Performing pre-flight checks..."
 
 # Check if project directory already exists
-if [ -d "$PROJECT_PATH" ]; then
+if [ -d "$PROJECT_PATH" ]; then # Use the corrected PROJECT_PATH
     echo "Warning: Project directory '$PROJECT_PATH' already exists."
     read -p "Do you want to remove it and create a new one? (y/n): " confirm
     if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
@@ -68,49 +68,58 @@ else
 fi
 
 # Check if project directory exists after creation attempt
-if [ ! -d "$PROJECT_PATH" ]; then
+if [ ! -d "$PROJECT_PATH" ]; then # Use the corrected PROJECT_PATH
     echo "Error: Failed to create project directory."
     exit 1
 fi
 
-# Ensure key directories exist
+# Ensure key directories exist (using corrected PROJECT_PATH)
 mkdir -p "$PROJECT_PATH/volumes/logs"
 mkdir -p "$PROJECT_PATH/volumes/db/data"
 mkdir -p "$PROJECT_PATH/volumes/storage"
 
 echo ""
 echo "Step 2: Copying initialization files"
-# Copy the SQL initialization files to the project
+# Copy the SQL initialization files to the project (using corrected PROJECT_PATH)
 cp _supabase.sql "$PROJECT_PATH/volumes/db/_supabase.sql"
 cp init_analytics_schema.sql "$PROJECT_PATH/volumes/db/logs.sql"
 echo "Database initialization scripts copied to project."
 
 echo ""
 echo "Step 3: Generating secure API keys"
+# Use corrected PROJECT_PATH for the env file
 ./generate_keys.py --env-file "$PROJECT_PATH/.env"
 
-# Update dashboard credentials in .env file
+# Update dashboard credentials using the Python script
 echo "Updating dashboard credentials..."
-sed -i '' "s/^DASHBOARD_USERNAME=.*/DASHBOARD_USERNAME=$DASHBOARD_USERNAME/" "$PROJECT_PATH/.env"
-sed -i '' "s/^DASHBOARD_PASSWORD=.*/DASHBOARD_PASSWORD=$DASHBOARD_PASSWORD/" "$PROJECT_PATH/.env"
+python3 update_env_credentials.py --project-name "$PROJECT_NAME" --username "$DASHBOARD_USERNAME" --password "$DASHBOARD_PASSWORD"
+# Check exit code of the python script
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to update dashboard credentials."
+    exit 1
+fi
 echo "Dashboard credentials updated."
 
 echo ""
 echo "Step 4: Copying security documentation"
+# Use corrected PROJECT_PATH
 cp sample_security_policies.sql "$PROJECT_PATH/"
 cp security_checklist.md "$PROJECT_PATH/"
 echo "Copied security documentation to $PROJECT_PATH/"
 
 echo ""
 echo "Step 5: Starting Supabase deployment"
-# Start all services with Docker Compose
-cd "$PROJECT_PATH" && docker compose up -d
+# Start all services with Docker Compose (using corrected PROJECT_PATH)
+echo "Changing directory to $PROJECT_PATH"
+cd "$PROJECT_PATH" || exit 1 # Exit if cd fails
+echo "Running docker compose up..."
+docker compose up -d
 
 # Wait for services to be ready
 echo "Waiting for services to be ready..."
 sleep 10
 
-# Get port information from the .env file
+# Get port information from the .env file (already in the project directory)
 STUDIO_PORT=$(grep "STUDIO_PORT=" ".env" | cut -d'=' -f2)
 KONG_HTTP_PORT=$(grep "KONG_HTTP_PORT=" ".env" | cut -d'=' -f2)
 POSTGRES_PORT=$(grep "POSTGRES_PORT=" ".env" | cut -d'=' -f2)
@@ -130,7 +139,8 @@ echo "- API Endpoint: http://localhost:$KONG_HTTP_PORT"
 echo "- PostgreSQL: localhost:$POSTGRES_PORT"
 echo ""
 echo "Security Documentation:"
-echo "- Security checklist: $PROJECT_PATH/security_checklist.md"
+# Use corrected PROJECT_PATH
+echo "- Security checklist: $PROJECT_PATH/security_checklist.md" 
 echo "- Sample security policies: $PROJECT_PATH/sample_security_policies.sql"
 echo ""
 echo "Next Steps:"
@@ -139,7 +149,8 @@ echo "2. Apply appropriate Row Level Security policies"
 echo "3. Update your client applications with the API keys"
 echo ""
 echo "To apply the sample security policies (after creating your tables):"
-echo "psql -h localhost -p $POSTGRES_PORT -U postgres -d postgres -f $PROJECT_PATH/sample_security_policies.sql"
+# Use corrected PROJECT_PATH
+echo "psql -h localhost -p $POSTGRES_PORT -U postgres -d postgres -f $PROJECT_PATH/sample_security_policies.sql" 
 echo ""
 echo "For more information, refer to the README.md file."
 echo "=================================================="
