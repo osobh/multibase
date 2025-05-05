@@ -39,10 +39,27 @@ def find_used_ports():
     """Find all currently used ports."""
     used_ports = set()
     
-    # Check listening ports using psutil
-    for conn in psutil.net_connections(kind='inet'):
-        if conn.status == 'LISTEN':
-            used_ports.add(conn.laddr.port)
+    try:
+        # Check listening ports using psutil
+        for conn in psutil.net_connections(kind='inet'):
+            if conn.status == 'LISTEN':
+                try:
+                    # Try different approaches to get the port
+                    if isinstance(conn.laddr, tuple) and len(conn.laddr) >= 2:
+                        # Handle as tuple (ip, port)
+                        port = conn.laddr[1]
+                        used_ports.add(port)
+                    elif hasattr(conn.laddr, 'port'):
+                        # Handle as object with port attribute
+                        port = conn.laddr.port  # type: ignore
+                        used_ports.add(port)
+                    # Skip if we can't determine the port
+                except (IndexError, AttributeError, TypeError):
+                    # Skip this connection if we can't get the port
+                    continue
+    except Exception as e:
+        # If psutil fails, log the error but continue
+        print(f"Warning: Error getting used ports: {e}")
     
     return used_ports
 
