@@ -91,8 +91,8 @@ echo "Step 3: Generating secure API keys"
 
 # Update dashboard credentials in .env file
 echo "Updating dashboard credentials..."
-sed -i "s/^DASHBOARD_USERNAME=.*/DASHBOARD_USERNAME=$DASHBOARD_USERNAME/" "$PROJECT_PATH/.env"
-sed -i "s/^DASHBOARD_PASSWORD=.*/DASHBOARD_PASSWORD=$DASHBOARD_PASSWORD/" "$PROJECT_PATH/.env"
+sed -i '' "s/^DASHBOARD_USERNAME=.*/DASHBOARD_USERNAME=$DASHBOARD_USERNAME/" "$PROJECT_PATH/.env"
+sed -i '' "s/^DASHBOARD_PASSWORD=.*/DASHBOARD_PASSWORD=$DASHBOARD_PASSWORD/" "$PROJECT_PATH/.env"
 echo "Dashboard credentials updated."
 
 echo ""

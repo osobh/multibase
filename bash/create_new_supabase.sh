@@ -56,11 +56,11 @@ fix_analytics_port() {
     # 2. "- 0.0.0.0:4000:4000/tcp" or similar (extended format)
     
     # First, handle the simple format - fixed the problematic quote characters
-    sed -i "s/- 4000:4000/- ${analytics_port}:4000/g" "$file"
+    sed -i '' "s/- 4000:4000/- ${analytics_port}:4000/g" "$file"
     
     # Then, handle the extended format with IP addresses
-    sed -i "s/0.0.0.0:4000->4000/0.0.0.0:${analytics_port}->4000/g" "$file"
-    sed -i "s/\[\:\:\]:4000->4000/\[\:\:\]:${analytics_port}->4000/g" "$file"
+    sed -i '' "s/0.0.0.0:4000->4000/0.0.0.0:${analytics_port}->4000/g" "$file"
+    sed -i '' "s/\[\:\:\]:4000->4000/\[\:\:\]:${analytics_port}->4000/g" "$file"
     
     # Check if the replacement was successful using fixed grep pattern
     if grep -q "${analytics_port}:4000" "$file"; then
@@ -70,7 +70,7 @@ fix_analytics_port() {
         # Direct port mapping check
         if grep -q "ports:" "$file" && grep -q "4000:4000" "$file"; then
             echo "Found direct port mapping format. Applying alternative fix..."
-            sed -i "s/      - 4000:4000/      - ${analytics_port}:4000/g" "$file"
+            sed -i '' "s/      - 4000:4000/      - ${analytics_port}:4000/g" "$file"
         fi
     fi
 }
@@ -85,7 +85,7 @@ fix_vector_docker_socket() {
     cp "$file" "${file}.bak"
     
     # Update the Vector container's socket configuration
-    sed -i 's|${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock|/var/run/docker.sock:/var/run/docker.sock|g' "$file"
+    sed -i '' 's|${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock|/var/run/docker.sock:/var/run/docker.sock|g' "$file"
     
     echo "Fixed Vector Docker socket configuration"
 }
@@ -153,7 +153,7 @@ EOL
     chmod +x "$PROJECT_NAME/volumes/analytics/entrypoint.sh"
     
     # Update the analytics service to use the custom entrypoint
-    sed -i -e '/analytics:/,/^[^ ]/ {
+    sed -i '' -e '/analytics:/,/^[^ ]/ {
       /volumes:/,/^[^ ]/ {
         /volumes:/a\      - ./volumes/analytics/entrypoint.sh:/entrypoint.sh:ro,z
       }
@@ -172,20 +172,20 @@ if [ -f "docker-compose.yml" ]; then
     cp docker-compose.yml "$PROJECT_NAME/docker-compose.yml"
     
     # Update project name
-    sed -i "s/name: supabase/name: $PROJECT_NAME/g" "$PROJECT_NAME/docker-compose.yml"
+    sed -i '' "s/name: supabase/name: $PROJECT_NAME/g" "$PROJECT_NAME/docker-compose.yml"
     
     # Update container names
-    sed -i "s/container_name: supabase-/container_name: $PROJECT_NAME-/g" "$PROJECT_NAME/docker-compose.yml"
+    sed -i '' "s/container_name: supabase-/container_name: $PROJECT_NAME-/g" "$PROJECT_NAME/docker-compose.yml"
     
     # Handle special case for realtime container
-    sed -i "s/realtime-dev.supabase-realtime/realtime-dev.$PROJECT_NAME-realtime/g" "$PROJECT_NAME/docker-compose.yml"
+    sed -i '' "s/realtime-dev.supabase-realtime/realtime-dev.$PROJECT_NAME-realtime/g" "$PROJECT_NAME/docker-compose.yml"
     
     # Update port mappings
-    sed -i "s/\${KONG_HTTP_PORT}:8000/$KONG_HTTP_PORT:8000/g" "$PROJECT_NAME/docker-compose.yml"
-    sed -i "s/\${KONG_HTTPS_PORT}:8443/$KONG_HTTPS_PORT:8443/g" "$PROJECT_NAME/docker-compose.yml"
-    sed -i "s/\${POSTGRES_PORT}:5432/$POSTGRES_PORT:5432/g" "$PROJECT_NAME/docker-compose.yml"
-    sed -i "s/\${POOLER_PROXY_PORT_TRANSACTION}:6543/$POOLER_PROXY_PORT:6543/g" "$PROJECT_NAME/docker-compose.yml"
-    sed -i "s/- 4000:4000/- $ANALYTICS_PORT:4000/g" "$PROJECT_NAME/docker-compose.yml"
+    sed -i '' "s/\${KONG_HTTP_PORT}:8000/$KONG_HTTP_PORT:8000/g" "$PROJECT_NAME/docker-compose.yml"
+    sed -i '' "s/\${KONG_HTTPS_PORT}:8443/$KONG_HTTPS_PORT:8443/g" "$PROJECT_NAME/docker-compose.yml"
+    sed -i '' "s/\${POSTGRES_PORT}:5432/$POSTGRES_PORT:5432/g" "$PROJECT_NAME/docker-compose.yml"
+    sed -i '' "s/\${POOLER_PROXY_PORT_TRANSACTION}:6543/$POOLER_PROXY_PORT:6543/g" "$PROJECT_NAME/docker-compose.yml"
+    sed -i '' "s/- 4000:4000/- $ANALYTICS_PORT:4000/g" "$PROJECT_NAME/docker-compose.yml"
     
     echo "Created docker-compose.yml with updated project name, container names, and port mappings"
     
@@ -270,7 +270,7 @@ if grep -q "volumes:" "$PROJECT_NAME/docker-compose.yml"; then
     fi
     
     # Now update any references to db-config in the services section
-    sed -i "s/- db-config:/- ${PROJECT_NAME}_db-config:/g" "$PROJECT_NAME/docker-compose.yml.tmp"
+    sed -i '' "s/- db-config:/- ${PROJECT_NAME}_db-config:/g" "$PROJECT_NAME/docker-compose.yml.tmp"
     
     # Move the temporary file to the final location
     mv "$PROJECT_NAME/docker-compose.yml.tmp" "$PROJECT_NAME/docker-compose.yml"

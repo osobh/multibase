@@ -85,7 +85,8 @@ serve((_req) => new Response("Hello from Edge Functions!"));
         (self.project_dir / "volumes/db/realtime.sql").write_text(self.templates["realtime_sql"])
         (self.project_dir / "volumes/db/roles.sql").write_text(self.templates["roles_sql"])
         (self.project_dir / "volumes/db/webhooks.sql").write_text(self.templates["webhooks_sql"])
-        (self.project_dir / "volumes/functions/main").write_text(self.templates["function_main"])
+        # Write to index.ts file inside the main directory, not to the directory itself
+        (self.project_dir / "volumes/functions/main/index.ts").write_text(self.templates["function_main"])
         (self.project_dir / "reset.sh").write_text(self.templates["reset_script"])
         (self.project_dir / "README.md").write_text(self.templates["readme"])
         
