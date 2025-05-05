@@ -1175,6 +1175,32 @@ services:
             - Content-Range
           credentials: true
           max_age: 3600
+          
+  - name: realtime-api
+    url: http://{self.project_name}-realtime:4000
+    routes:
+      - name: realtime-api-route
+        paths:
+          - /api/tenants/realtime-dev
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - {cors_origins_setting}
+          methods:
+            - GET
+            - HEAD
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+            - apikey
+          exposed_headers:
+            - Content-Length
+            - Content-Range
+          credentials: true
+          max_age: 3600
   - name: storage
     url: http://{self.project_name}-storage:5000
     routes:
