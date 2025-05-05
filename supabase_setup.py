@@ -28,7 +28,7 @@ class SupabaseProjectGenerator:
         if is_localhost == 'Y':
             protocol = 'http://'
             domain = 'localhost'
-            self.cors_origins_config = '*'  # Allow all origins for localhost (without extra quotes)
+            self.cors_origins_config = '"*"'  # Add quotes around the asterisk for YAML
             print("Defaulting to protocol: http")
             print("Using domain: localhost")
             print("Configuring CORS to allow all origins (*)")
@@ -38,7 +38,7 @@ class SupabaseProjectGenerator:
             if not protocol.endswith("://"):
                 protocol += "://"
             domain = input("Enter your domain (e.g., example.com): ").strip()
-            self.cors_origins_config = f'{protocol}{domain}' # Use specific origin (without extra quotes)
+            self.cors_origins_config = f'"{protocol}{domain}"' # Add quotes around the domain for YAML
 
         self.origin = f"{protocol}{domain}" # Still set self.origin for potential other uses (.env)
 
@@ -89,6 +89,8 @@ serve((_req) => new Response("Hello from Edge Functions!"));
         (self.project_dir / "docker-compose.yml").write_text(self.templates["docker_compose"])
         (self.project_dir / ".env").write_text(self.templates["env"])
         (self.project_dir / "volumes/api/kong.yml").write_text(self.templates["kong"])
+        # Create docker-compose.override.yml to fix Kong YAML parsing issues
+        self._create_docker_compose_override()
         self._write_vector_config()  # Use the dynamic vector config method
         (self.project_dir / "volumes/pooler/pooler.exs").write_text(self.templates["pooler"])
         (self.project_dir / "volumes/db/_supabase.sql").write_text(self.templates["supabase_sql"])
@@ -103,6 +105,18 @@ serve((_req) => new Response("Hello from Edge Functions!"));
         (self.project_dir / "reset.sh").write_text(self.templates["reset_script"])
         (self.project_dir / "README.md").write_text(self.templates["readme"])
         
+    def _create_docker_compose_override(self):
+        """Create docker-compose.override.yml to fix Kong YAML parsing issues."""
+        override_content = """services:
+  kong:
+    volumes:
+      - ./volumes/api/kong.yml:/home/kong/kong.yml:ro,z
+    entrypoint: /docker-entrypoint.sh kong docker-start
+"""
+        override_path = self.project_dir / "docker-compose.override.yml"
+        override_path.write_text(override_content)
+        print(f"Created docker-compose.override.yml to fix Kong YAML parsing issues")
+
     def _write_vector_config(self):
         """Write the vector.yml config with dynamic project/service names."""
         vector_template = self.templates["vector"]
