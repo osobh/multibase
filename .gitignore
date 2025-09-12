@@ -1,6 +1,9 @@
 .env
 *env/
-*env*
+env/
+venv/
+.venv/
+# *env* # removed as this was ignoring valid files with env in the name
 # Python cache files
 supabase/
 *supabase
