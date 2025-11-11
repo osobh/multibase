@@ -767,10 +767,8 @@ GOOGLE_PROJECT_NUMBER=GOOGLE_PROJECT_NUMBER"""
         """Initialize vector.yml template."""
         try:
             # Try to read the template from the file
-            # Use absolute path if available, otherwise try relative path
-            vector_path = Path("/home/osobh/projects/multibase/vector.yml")
-            if not vector_path.exists():
-                vector_path = Path("projects/multibase/vector.yml")
+            # Use path relative to this script's location
+            vector_path = Path(__file__).parent / "vector.yml"
             if vector_path.exists():
                 self.templates["vector"] = vector_path.read_text()
                 print(f"Using vector.yml template from {vector_path}")

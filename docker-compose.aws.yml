@@ -1,0 +1,214 @@
+# AWS-Optimized Docker Compose Override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d
+#
+# This file provides AWS-specific configurations including:
+# - S3-backed storage instead of file storage
+# - External RDS database support
+# - ALB/Load balancer friendly configuration
+# - CloudWatch logging (optional)
+# - Optimized health checks for AWS
+#
+# Prerequisites:
+# - AWS IAM role with S3 access OR AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+# - (Optional) External RDS PostgreSQL instance
+# - ALB/NLB configured to point to Kong port 8000
+# - Security groups allowing traffic between services
+
+version: '3.8'
+
+services:
+  # Kong API Gateway - Entry point for ALB
+  kong:
+    # Remove port mappings if using ALB - ALB should target Kong directly on internal network
+    # Comment out 'ports' section if Kong is accessed only through ALB
+    ports:
+      - "8000:8000"  # HTTP - Comment out if using ALB
+      # - "8443:8443"  # HTTPS - Comment out if terminating SSL at ALB
+    environment:
+      # Add DNS search for better container resolution in cloud environments
+      # This helps resolve service names consistently
+      KONG_DNS_ORDER: LAST,A,CNAME
+    # Uncomment for CloudWatch logging
+    # logging:
+    #   driver: awslogs
+    #   options:
+    #     awslogs-region: us-east-1
+    #     awslogs-group: /ecs/supabase-kong
+    #     awslogs-stream-prefix: kong
+
+  # Storage - AWS S3 Backend
+  storage:
+    volumes:
+      # Remove file storage volume when using S3
+      []
+    environment:
+      # S3 Configuration
+      STORAGE_BACKEND: s3
+
+      # AWS S3 Settings
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}  # Leave empty if using IAM roles
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}  # Leave empty if using IAM roles
+      AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+
+      # S3 Bucket Configuration
+      GLOBAL_S3_BUCKET: ${AWS_S3_BUCKET}  # Required: Your S3 bucket name
+      REGION: ${AWS_REGION:-us-east-1}
+      GLOBAL_S3_PROTOCOL: https
+      # Set to 'false' for AWS S3, 'true' for S3-compatible services like MinIO
+      GLOBAL_S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
+      # Optional: Custom S3 endpoint for S3-compatible services
+      GLOBAL_S3_ENDPOINT: ${S3_ENDPOINT:-}
+
+      # Storage API Configuration
+      FILE_SIZE_LIMIT: ${STORAGE_FILE_SIZE_LIMIT:-52428800}  # 50MB default
+      TENANT_ID: ${STORAGE_TENANT_ID:-default}
+    # Uncomment for CloudWatch logging
+    # logging:
+    #   driver: awslogs
+    #   options:
+    #     awslogs-region: us-east-1
+    #     awslogs-group: /ecs/supabase-storage
+    #     awslogs-stream-prefix: storage
+
+  # ImgProxy - Remove S3 volume since we're using S3
+  imgproxy:
+    volumes:
+      []
+    environment:
+      # ImgProxy will fetch from S3 through storage API
+      IMGPROXY_USE_S3: ${IMGPROXY_USE_S3:-false}
+      IMGPROXY_S3_REGION: ${AWS_REGION:-us-east-1}
+      IMGPROXY_S3_ENDPOINT: ${S3_ENDPOINT:-}
+
+  # Database - Use External RDS (Recommended for Production)
+  # Uncomment this section and comment out the 'db' service in docker-compose.yml
+  # db:
+  #   # Remove the entire db service when using external RDS
+  #   # Set POSTGRES_HOST to your RDS endpoint in .env.aws
+  #   restart: "no"  # This prevents the service from starting
+  #   entrypoint: ["echo", "Using external RDS database"]
+  #   command: []
+
+  # Studio
+  studio:
+    # Uncomment for CloudWatch logging
+    # logging:
+    #   driver: awslogs
+    #   options:
+    #     awslogs-region: us-east-1
+    #     awslogs-group: /ecs/supabase-studio
+    #     awslogs-stream-prefix: studio
+
+  # Auth Service
+  auth:
+    environment:
+      # Ensure external URL is set correctly for cloud
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL}  # Should be your ALB DNS name
+      GOTRUE_SITE_URL: ${SITE_URL}
+    # Uncomment for CloudWatch logging
+    # logging:
+    #   driver: awslogs
+    #   options:
+    #     awslogs-region: us-east-1
+    #     awslogs-group: /ecs/supabase-auth
+    #     awslogs-stream-prefix: auth
+
+  # REST API
+  rest:
+    # Uncomment for CloudWatch logging
+    # logging:
+    #   driver: awslogs
+    #   options:
+    #     awslogs-region: us-east-1
+    #     awslogs-group: /ecs/supabase-rest
+    #     awslogs-stream-prefix: rest
+
+  # Realtime
+  realtime:
+    # Uncomment for CloudWatch logging
+    # logging:
+    #   driver: awslogs
+    #   options:
+    #     awslogs-region: us-east-1
+    #     awslogs-group: /ecs/supabase-realtime
+    #     awslogs-stream-prefix: realtime
+
+  # Meta
+  meta:
+    # Uncomment for CloudWatch logging
+    # logging:
+    #   driver: awslogs
+    #   options:
+    #     awslogs-region: us-east-1
+    #     awslogs-group: /ecs/supabase-meta
+    #     awslogs-stream-prefix: meta
+
+  # Functions
+  functions:
+    # Uncomment for CloudWatch logging
+    # logging:
+    #   driver: awslogs
+    #   options:
+    #     awslogs-region: us-east-1
+    #     awslogs-group: /ecs/supabase-functions
+    #     awslogs-stream-prefix: functions
+
+  # Analytics
+  analytics:
+    # Uncomment for CloudWatch logging
+    # logging:
+    #   driver: awslogs
+    #   options:
+    #     awslogs-region: us-east-1
+    #     awslogs-group: /ecs/supabase-analytics
+    #     awslogs-stream-prefix: analytics
+
+# Health check endpoints for ALB Target Groups:
+# - Kong: http://kong:8000/ (returns 404 but means Kong is running)
+# - Studio: http://studio:3000/api/profile (requires auth)
+# - Auth: http://auth:9999/health
+# - Storage: http://storage:5000/status
+# - Realtime: http://realtime:4000/api/tenants/realtime-dev/health (requires JWT)
+# - Rest: http://rest:3000/ (returns Swagger UI)
+# - Analytics: http://analytics:4000/health
+
+# AWS-Specific Notes:
+# 1. IAM Role for ECS/EC2 (Recommended):
+#    - Attach IAM role with S3 permissions to EC2 instance or ECS task
+#    - Leave AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY empty
+#
+# 2. S3 Bucket Policy Example:
+#    {
+#      "Version": "2012-10-17",
+#      "Statement": [{
+#        "Effect": "Allow",
+#        "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"],
+#        "Resource": [
+#          "arn:aws:s3:::your-bucket-name/*",
+#          "arn:aws:s3:::your-bucket-name"
+#        ]
+#      }]
+#    }
+#
+# 3. Security Group Rules:
+#    - Allow inbound 8000 (Kong) from ALB security group
+#    - Allow all outbound traffic
+#    - Allow internal communication between all services
+#
+# 4. ALB Target Group Settings:
+#    - Protocol: HTTP
+#    - Port: 8000
+#    - Health check path: /
+#    - Health check interval: 30s
+#    - Healthy threshold: 2
+#    - Unhealthy threshold: 3
+#    - Timeout: 5s
+#    - Success codes: 404 (Kong returns 404 for root)
+#    - Stickiness: Enable for WebSocket (Realtime) support
+#
+# 5. RDS Configuration (if using external database):
+#    - PostgreSQL 15.x
+#    - Set POSTGRES_HOST to RDS endpoint
+#    - Ensure security group allows 5432 from EC2/ECS
+#    - Enable automated backups
+#    - Use Parameter Store or Secrets Manager for credentials
