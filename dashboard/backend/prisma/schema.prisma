@@ -1,0 +1,77 @@
+// Multibase Dashboard Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Instance {
+  id          String   @id
+  name        String   @unique
+  basePort    Int
+  status      String   // 'running', 'stopped', 'degraded', 'healthy'
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  metrics     Metric[]
+  alerts      Alert[]
+
+  @@index([name])
+  @@index([status])
+}
+
+model Metric {
+  id          Int      @id @default(autoincrement())
+  instanceId  String
+  service     String   // 'kong', 'studio', 'db', 'auth', etc.
+  cpu         Float    // CPU percentage
+  memory      Float    // Memory in MB
+  networkRx   Float    // Network received in bytes
+  networkTx   Float    // Network transmitted in bytes
+  diskRead    Float    // Disk read in bytes
+  diskWrite   Float    // Disk write in bytes
+  timestamp   DateTime @default(now())
+  instance    Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId, timestamp])
+  @@index([service])
+}
+
+model Alert {
+  id            Int       @id @default(autoincrement())
+  instanceId    String
+  name          String    // Alert rule name
+  rule          String    // 'service_down', 'high_cpu', 'high_memory', etc.
+  condition     String    // JSON string with condition details
+  threshold     Float?    // Threshold value
+  duration      Int?      // Duration in seconds before triggering
+  enabled       Boolean   @default(true)
+  status        String    // 'active', 'acknowledged', 'resolved'
+  triggeredAt   DateTime?
+  acknowledgedAt DateTime?
+  resolvedAt    DateTime?
+  message       String?   // Alert message
+  notificationChannels String? // JSON array of channels ['browser', 'webhook']
+  webhookUrl    String?   // Webhook URL for notifications
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  instance      Instance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@index([status])
+  @@index([rule])
+}
+
+model SystemMetric {
+  id          Int      @id @default(autoincrement())
+  totalCpu    Float
+  totalMemory Float
+  totalDisk   Float
+  instanceCount Int
+  runningCount  Int
+  timestamp   DateTime @default(now())
+
+  @@index([timestamp])
+}
