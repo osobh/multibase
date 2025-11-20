@@ -2,6 +2,73 @@
 
 This repository provides a robust, secure, and reproducible workflow for creating and managing self-hosted Supabase deployments using Docker Compose.
 
+**Two ways to manage your deployments:**
+- **Command Line Interface (CLI)** - Fast, scriptable deployment and management tools
+- **Web Dashboard** - Visual monitoring and management with real-time metrics, logs, and alerts
+
+---
+
+## Quick Start
+
+Choose your preferred management approach:
+
+### Option 1: CLI (Fast Setup)
+
+```bash
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Create a new Supabase deployment
+./setup_secure_supabase.sh myproject
+
+# Start the deployment
+cd projects/myproject
+docker compose up -d
+```
+
+### Option 2: Web Dashboard (Visual Management)
+
+```bash
+# Start the dashboard
+cd dashboard
+./launch.sh
+
+# Access the dashboard
+# Frontend: http://localhost:5173
+# API: http://localhost:3001
+```
+
+The dashboard provides:
+- Real-time instance monitoring
+- Resource metrics (CPU, memory, disk, network)
+- Log streaming and search
+- Alert rules and notifications
+- Visual instance management
+
+See [Dashboard Quick Start Guide](dashboard/QUICKSTART.md) for detailed setup instructions.
+
+---
+
+## Management Options
+
+### CLI Tools
+Perfect for automation, scripting, and quick operations:
+- Fast deployment creation
+- Command-line control
+- Integration with CI/CD pipelines
+- See [CLI Reference](#project-management) below
+
+### Web Dashboard
+Visual interface for monitoring and operations:
+- Real-time health checks (every 10s)
+- Resource metrics collection (every 15s)
+- Service-level status tracking
+- Log streaming with search
+- Configurable alert rules
+- Instance credentials viewer
+
+**Both tools work together** - they manage the same `projects/` directory and can be used interchangeably.
+
 ---
 
 ## Directory Structure
@@ -32,7 +99,7 @@ Each deployment is isolated in its own subdirectory:
 ---
 
 ```
-/projects
+/projects                    # Supabase deployments (managed by both CLI and Dashboard)
   /myproject
     docker-compose.yml
     .env
@@ -40,14 +107,102 @@ Each deployment is isolated in its own subdirectory:
     sample_security_policies.sql
     security_checklist.md
     README.md
+
+/dashboard                   # Web-based management interface
+  /backend                   # Node.js API + monitoring services
+    /src
+    prisma/                  # Database schema for metrics/logs
+    package.json
+  /frontend                  # React web interface
+    /src
+    package.json
+  launch.sh                  # Start dashboard (backend + frontend + Redis)
+  stop.sh                    # Stop dashboard services
+  status.sh                  # Check dashboard status
+  README.md                  # Comprehensive dashboard documentation
+  QUICKSTART.md              # 5-minute setup guide
 ```
 
-**Note:**  
+**Note:**
 The `projects/` directory is included in `.gitignore` to ensure that secrets and environment files are never committed to version control.
 
 ---
 
-## Quick Start
+## Dashboard Features
+
+The web dashboard provides comprehensive monitoring and management capabilities:
+
+### Real-Time Monitoring
+- **Health Checks**: Automated health monitoring every 10 seconds for all instances
+- **Metrics Collection**: CPU, memory, disk, and network metrics collected every 15 seconds
+- **Service Status**: Per-container status tracking (Kong, Postgres, Auth, Realtime, Storage, etc.)
+- **WebSocket Updates**: Real-time push notifications for status and metric changes
+
+### Instance Management
+- **Visual Creation**: Create new Supabase instances through an intuitive web form
+- **Lifecycle Control**: Start, stop, restart, and delete instances
+- **Credential Management**: View and regenerate API keys and credentials
+- **Port Management**: Automatic port assignment to avoid conflicts
+
+### Analytics & Insights
+- **System Metrics**: Overall resource usage across all instances
+- **Per-Instance Analytics**: Detailed metrics and historical data for each instance
+- **Service-Level Metrics**: Resource usage broken down by container
+- **Time-Series Visualization**: Interactive charts and gauges
+
+### Logging
+- **Log Streaming**: Real-time log viewing for any service
+- **Search & Filter**: Find log entries by service, time range, or keyword
+- **Log Download**: Export logs for offline analysis
+
+### Alerting
+- **Alert Rules**: Configure thresholds for CPU, memory, disk, and service health
+- **Alert Management**: View, acknowledge, and resolve alerts
+- **Alert History**: Track alert patterns and statistics
+- **Notification System**: Get notified when thresholds are exceeded
+
+### Technical Stack
+**Backend:**
+- Node.js 20+ with TypeScript
+- Express REST API
+- Socket.io for WebSocket
+- Prisma ORM + SQLite (metrics storage)
+- Redis (real-time caching)
+- dockerode (Docker API integration)
+
+**Frontend:**
+- React 19 with TypeScript
+- Vite build tool
+- TailwindCSS + shadcn/ui components
+- Recharts for visualization
+- React Query for data fetching
+
+### Getting Started with Dashboard
+
+**Prerequisites:**
+- Node.js 20+
+- Docker and Docker Compose
+- Redis (auto-started by launch script)
+
+**Installation:**
+```bash
+cd dashboard
+./launch.sh
+```
+
+**Access:**
+- Frontend: http://localhost:5173
+- API: http://localhost:3001
+
+**Documentation:**
+- [Complete Dashboard Guide](dashboard/README.md) - Full API reference and architecture
+- [Quick Start](dashboard/QUICKSTART.md) - 5-minute setup guide
+- [Scripts Reference](dashboard/SCRIPTS.md) - launch.sh, stop.sh, status.sh details
+- [Quick Reference](dashboard/QUICK_REFERENCE.md) - Cheat sheet for daily use
+
+---
+
+## CLI Quick Start
 
 ### 1. Prerequisites
 
@@ -112,22 +267,6 @@ docker compose down
 - To update a deployment, re-run the setup script or use the management commands.
 - You can customize the generated files in each project directory as needed.
 - For advanced configuration, edit the generated `docker-compose.yml` or `.env` in your project directory.
-
----
-
-## Example Usage
-
-```bash
-# Create a new deployment
-./setup_secure_supabase.sh myproject
-
-# Start the deployment
-cd projects/myproject
-docker compose up -d
-
-# Stop the deployment
-docker compose down
-```
 
 ---
 
@@ -284,7 +423,13 @@ Common issues and solutions:
 
 ### Documentation Index
 
-Comprehensive guides for cloud deployment:
+Comprehensive guides for deployment and management:
+
+#### Dashboard Management
+- 📊 **[Dashboard Overview](dashboard/README.md)** - Complete dashboard documentation
+- ⚡ **[Dashboard Quick Start](dashboard/QUICKSTART.md)** - 5-minute setup guide
+- 🔧 **[Scripts Reference](dashboard/SCRIPTS.md)** - launch.sh, stop.sh, status.sh details
+- 📝 **[Quick Reference](dashboard/QUICK_REFERENCE.md)** - Cheat sheet for daily use
 
 #### Core Deployment Guides
 - 📘 **[AWS Deployment Guide](docs/AWS_DEPLOYMENT.md)** - Complete AWS setup (EC2, ALB, RDS, S3)

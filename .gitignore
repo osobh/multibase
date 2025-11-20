@@ -52,3 +52,61 @@ wheels/
 # Backup files
 *.bak
 *~
+
+# Node.js dependencies and package manager files
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+
+# Build outputs (Node.js/Frontend)
+dist/
+dist-ssr/
+*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Database files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Process IDs
+*.pid
+.pids/
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+
+# Cache directories
+.cache/
+.eslintcache
+.parcel-cache/
+.vite/
+.turbo/
+
+# Prisma
+prisma/data/
+**/prisma/data/
+
+# Next.js (if used in future)
+.next/
+out/
+
+# Nuxt.js (if used in future)
+.nuxt/
+
+# Logs (enhanced for Node.js)
+logs/
+pids/
+*.seed
+*.pid.lock
